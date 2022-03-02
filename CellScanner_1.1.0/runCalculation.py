@@ -5,7 +5,6 @@ import db_script as db
 import clusterScript as c
 from fcsparser import parse
 from pandas import read_csv
-from PyQt5.QtWidgets import QMessageBox, QWidget
 
 
 def run(self):
@@ -124,8 +123,7 @@ def getChannelsFromFile(filename):
        data = read_csv(filename, header=0, sep=',', nrows=2)
     elif filename[-3:] == 'fcs':
         meta, data = parse(filename, reformat_meta=True)
-    return (list(data.columns))
-
+    return list(data.columns)
 
 
 def isempty(L):

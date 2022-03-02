@@ -1,5 +1,4 @@
 import runScript as s
-import os.path
 from os import path
 ##RUN for 13 species
 sp=['Bifidobacterium adolescentis','Blautia hydrogenotrophica','Bacteroides thetaiotaomicron',
