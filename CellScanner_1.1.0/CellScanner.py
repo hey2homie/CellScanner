@@ -1,17 +1,14 @@
 import sys
+from datetime import datetime
 from os import path, getcwd
-from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QAction, QComboBox, QSpinBox, \
-    QGridLayout, \
-    QFileDialog, qApp, QMessageBox, QAbstractSpinBox, QCheckBox, QHBoxLayout, QScrollArea, QLineEdit, QCompleter, \
+from PyQt6.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, QComboBox, QSpinBox, QGridLayout, \
+    QFileDialog, QMessageBox, QAbstractSpinBox, QCheckBox, QHBoxLayout, QScrollArea, QLineEdit, QCompleter, \
     QListView, QApplication, QDoubleSpinBox
-from PyQt5.QtCore import Qt,QUrl
-#from PyQt5.QtCore.Qt.WebEngineWidgets import QWebEngineView
-from PyQt5.QtGui import QPalette, QStandardItemModel, QIcon, QFont,QColor,QPixmap
+from PyQt6.QtCore import Qt, QCoreApplication
+from PyQt6.QtGui import QPalette, QStandardItemModel, QIcon, QFont, QPixmap, QAction, QColor
 import db_script as db
 from functools import partial
 import webbrowser
-
-
 import runCalculation as r
 
 
@@ -27,15 +24,15 @@ class MainWindow(QMainWindow):
         self.label = QLabel("CellScanner")
         self.label2 = QLabel()
         self.img = QPixmap('logo.png')
-        self.img=self.img.scaled(150,150,Qt.KeepAspectRatio, Qt.FastTransformation)
+        self.img = self.img.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio,
+                                   Qt.TransformationMode.FastTransformation)
         self.label2.setPixmap(self.img)
-        self.label2.resize(self.img.width(),self.img.height())
+        self.label2.resize(self.img.width(), self.img.height())
         self.label3 = QLabel("Let's predict what is \n in your medium!")
-
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setFont(QFont("Century Gothic", 19, QFont.Bold))
-        self.label2.setAlignment(Qt.AlignCenter)
-        self.label3.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label.setFont(QFont("Century Gothic", 19, weight=75))
+        self.label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label3.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label3.setFont(QFont("Century Gothic", 15))
         self.buttonP = QPushButton('New Prediction')
         self.buttonA = QPushButton('Tool Analysis')
@@ -47,18 +44,17 @@ class MainWindow(QMainWindow):
         self.buttonU.clicked.connect(self.clickU)
         self.buttonC.clicked.connect(self.clickC)
         self.buttonCa.clicked.connect(self.clickCa)
-        self.versionLabel= QLabel('Version 1.1.0\nCJOSEPH')
+        self.versionLabel = QLabel('Version 1.1.0\nCJOSEPH')
         layout = QGridLayout()
-        layout.addWidget(self.label,0,0,1,2)
+        layout.addWidget(self.label, 0, 0, 1, 2)
         layout.addWidget(self.label2, 1, 0, 1, 2)
         layout.addWidget(self.label3, 2, 0, 1, 2)
-        layout.addWidget(self.buttonP,3,0,1,2)
-        layout.addWidget(self.buttonA,4,0,1,2)
-        layout.addWidget(self.buttonC,5,0,1,1)
-        layout.addWidget(self.buttonCa,5,1,1,1)
-        layout.addWidget(self.buttonU,6,0,1,2)
-        layout.addWidget(self.versionLabel,7,0,1,1)
-
+        layout.addWidget(self.buttonP, 3, 0, 1, 2)
+        layout.addWidget(self.buttonA, 4, 0, 1, 2)
+        layout.addWidget(self.buttonC, 5, 0, 1, 1)
+        layout.addWidget(self.buttonCa, 5, 1, 1, 1)
+        layout.addWidget(self.buttonU, 6, 0, 1, 2)
+        layout.addWidget(self.versionLabel, 7, 0, 1, 1)
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
@@ -89,11 +85,11 @@ class MainWindow(QMainWindow):
         self.setGeometry(300, 300, 300, 200)
         self.show()
 
-    def closeEvent(self,event):
-        sys.exit(app.exec_())
+    def closeEvent(self, event):
+        sys.exit(app.exec())
 
     def closeA(self):
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
     def clickP(self):
         self.cams = WindowPredictAssess('prediction')
@@ -108,7 +104,7 @@ class MainWindow(QMainWindow):
         self.cams.show()
 
     def clickC(self):
-        self.cams= WindowPredictAssess('clustering')
+        self.cams = WindowPredictAssess('clustering')
         self.cams.show()
 
     def clickS(self):
@@ -116,7 +112,7 @@ class MainWindow(QMainWindow):
         self.cams.show()
 
     def clickCa(self):
-        self.cams= WindowPredictAssess('clustA')
+        self.cams = WindowPredictAssess('clustA')
         self.cams.show()
 
     def clickFc(self):
@@ -125,23 +121,21 @@ class MainWindow(QMainWindow):
 
     def clickH(self):
         if path.exists('Help.pdf'):
-            webbrowser.open(r'file://'+getcwd()+'/Help.pdf')
+            webbrowser.open(r'file://' + getcwd() + '/Help.pdf')
         else:
             try:
                 webbrowser.open("http://msysbiology.com/documents/CellScanner/user_manual.pdf")
             except:
-                msg = QMessageBox.warning(self, 'Error', 'Impossible to find the help file, please check your internet connection.')
+                msg = QMessageBox.warning(self, 'Error',
+                                          'Impossible to find the help file, please check your internet connection.')
 
-
-
-########################### PREDICTION WINDOWS
 
 class WindowPredictAssess(QWidget):
 
     def __init__(self, state):
         QWidget.__init__(self)
         v = db.getFcValue()
-        if v == []:
+        if not v:
             msg = QMessageBox.warning(self, 'Error', 'Please select a flow cytometer to launch the program')
             self.show()
             self.close()
@@ -150,7 +144,7 @@ class WindowPredictAssess(QWidget):
         self.state = state
         if self.state == 'clustering':
             self.setWindowTitle('Clustering step 1/4')
-            self.title = QLabel('Cluster prediction of community\n    \n') #TODO
+            self.title = QLabel('Cluster prediction of community\n    \n')
         elif self.state == 'assessment':
             self.setWindowTitle('Predict step 1/4')
             self.title = QLabel('Species prediction\nfor in-silico community\n    \n')
@@ -160,8 +154,8 @@ class WindowPredictAssess(QWidget):
         self.resize(400, 100)
         self.move(500, 200)
 
-        self.title.setFont(QFont('Arial', 13, QFont.Bold))
-        self.title.setAlignment(Qt.AlignCenter)
+        self.title.setFont(QFont('Arial', 13, weight=75))
+        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         classList = db.getClassNames(True)
         self.classes = QComboBox()
         for a in classList:
@@ -177,16 +171,15 @@ class WindowPredictAssess(QWidget):
         self.setLayout(self.grid)
 
     def classUpdate(self):
-
         self.aClass = str(self.classes.currentText())
         self.classes.setDisabled(True)
         self.ok1.deleteLater()
-        if self.state=='clustering' or self.state == 'clustA':
+        if self.state == 'clustering' or self.state == 'clustA':
             self.setWindowTitle('Clustering step 2/4')
         else:
             self.setWindowTitle('Predict step 2/4')
         self.label1 = QLabel('Number of ' + self.aClass + ' records  ')
-        # self.label1.setFont(QFont('Arial', 17, QFont.Bold))
+        # self.label1.setFont(QFont('Arial', 17, weight=75))
         self.entry = QSpinBox(self)
         self.entry.setRange(2, len(db.getRecordNames(self.aClass, True)))
         self.ok = QPushButton('OK')
@@ -201,7 +194,7 @@ class WindowPredictAssess(QWidget):
         value = self.entry.value()
         self.entry.setDisabled(True)
         self.ok.deleteLater()
-        if self.state=='clustering'or self.state == 'clustA':
+        if self.state == 'clustering' or self.state == 'clustA':
             self.setWindowTitle('Clustering step 3/4')
         else:
             self.setWindowTitle('Predict step 3/4')
@@ -228,7 +221,7 @@ class WindowPredictAssess(QWidget):
     def addTeacher(self, species, i):
         self.teachersselect.addItem(species)
         item = self.teachersselect.model().item(i, 0)
-        item.setCheckState(Qt.Unchecked)
+        item.setCheckState(Qt.CheckState.Unchecked)
 
 
 class WindowLPF(QWidget):
@@ -247,8 +240,8 @@ class WindowLPF(QWidget):
             self.files = [[]]
             self.setWindowTitle('Predict step 4/4')
             self.title = QLabel('\nFile(s) selection for the prediction(s)\n    \n')
-            self.title.setFont(QFont('Arial', 13, QFont.Bold))
-            self.title.setAlignment(Qt.AlignCenter)
+            self.title.setFont(QFont('Arial', 13, weight=75))
+            self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.inputFile = QPushButton('Select file(s)')
             self.selectedFiles = QLabel()
             self.inputFile.clicked.connect(partial(self.openFileNamesDialog, 0))
@@ -264,8 +257,8 @@ class WindowLPF(QWidget):
             self.files = len(self.speciesPos) * [[]]
             self.setWindowTitle('Predict step 4/4')
             self.title = QLabel('\nFile(s) selection for assessment\n    \n')
-            self.title.setFont(QFont('Arial', 13, QFont.Bold))
-            self.title.setAlignment(Qt.AlignCenter)
+            self.title.setFont(QFont('Arial', 13, weight=75))
+            self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.buttons = []
             self.labels = []
             self.selectedFiles = []
@@ -281,13 +274,13 @@ class WindowLPF(QWidget):
                 self.grid.addWidget(self.buttons[i], i + 1, 2)
             self.ok = QPushButton('OK')
             self.ok.clicked.connect(self.report)
-            self.grid.addWidget(self.ok, i + 2, 2)
+            self.grid.addWidget(self.ok, i + 2, 2)  # TODO: What?
         elif self.state == 'clustering':
             self.files = [[]]
             self.setWindowTitle('Clusering step 4/4')
             self.title = QLabel('\nFile(s) selection for the clustering(s)\n    \n')
-            self.title.setFont(QFont('Arial', 13, QFont.Bold))
-            self.title.setAlignment(Qt.AlignCenter)
+            self.title.setFont(QFont('Arial', 13, weight=75))
+            self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.inputFile = QPushButton('Select file(s)')
             self.selectedFiles = QLabel()
             self.inputFile.clicked.connect(partial(self.openFileNamesDialog, 0))
@@ -302,8 +295,8 @@ class WindowLPF(QWidget):
             self.files = len(self.speciesPos) * [[]]
             self.setWindowTitle('Clustering step 4/4')
             self.title = QLabel('\nFile(s) selection for assessment\n    \n')
-            self.title.setFont(QFont('Arial', 13, QFont.Bold))
-            self.title.setAlignment(Qt.AlignCenter)
+            self.title.setFont(QFont('Arial', 13, weight=75))
+            self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.buttons = []
             self.labels = []
             self.selectedFiles = []
@@ -319,7 +312,7 @@ class WindowLPF(QWidget):
                 self.grid.addWidget(self.buttons[i], i + 1, 2)
             self.ok = QPushButton('OK')
             self.ok.clicked.connect(self.report)
-            self.grid.addWidget(self.ok, i + 2, 2)
+            self.grid.addWidget(self.ok, i + 2, 2)  # TODO: What?
         self.grid.addWidget(self.title, 0, 0, 1, 2)
         self.setLayout(self.grid)
         self.show()
@@ -328,8 +321,7 @@ class WindowLPF(QWidget):
         self.speciesPos = aList
 
     def openFileNamesDialog(self, i):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.Option.DontUseNativeDialog  # TODO: Not sure if it will work, check changes to restore
         files, _ = QFileDialog.getOpenFileNames(self, "Select data file(s)", "",
                                                 "All Files (*csv *fcs);;CSV Files (*.csv);;FCS Files (*.fcs)",
                                                 options=options)
@@ -348,14 +340,13 @@ class WindowLPF(QWidget):
         else:
             self.calculation = WindowCalculation(self)
             self.calculation.show()
-            qApp.processEvents()
+            QCoreApplication.processEvents()
             self.close()
             self.run()
 
-
     def run(self):
         directory = r.run(self)
-        if directory =='None':
+        if directory == 'None':
             self.calculation.close()
         else:
             self.calculation.setDirectory(directory)
@@ -373,7 +364,7 @@ class WindowCalculation(QWidget):
         self.resize(300, 100)
         self.move(500, 200)
         self.progressBar = QLabel('Prediction in progress...')
-        self.progressBar.setFont(QFont('Arial', 13, QFont.Bold))
+        self.progressBar.setFont(QFont('Arial', 13, weight=75))
         self.grid.addWidget(self.progressBar, 1, 0)
         self.setLayout(self.grid)
         self.show()
@@ -393,26 +384,25 @@ class WindowCalculation(QWidget):
         self.setLayout(self.grid)
         self.show()
 
-########################################  DATABASE UPDATE
+
+# DATABASE UPDATE
 
 
 class WindowUpdate(QWidget):
 
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self)
-
         classList = db.getClassNames()
         self.setWindowIcon(QIcon('logo.png'))
         self.setWindowTitle('Update reference data')
         self.resize(300, 300)
         self.move(500, 200)
         self.label = QLabel('Update reference data:')
-        self.label.setFont(QFont('Arial', 13, QFont.Bold))
+        self.label.setFont(QFont('Arial', 13, weight=75))
         self.label2 = QLabel('In this page you can create, delete and update a class,\n '
                              'click update to add new records and  reference files to a class.')
         self.labelClass = QLabel('\nSelect a Class to update:')
         self.aClassQ = QComboBox()
-
         for a in classList:
             self.aClassQ.addItem(a)
         self.buttonAdd = QPushButton('Create a class')
@@ -480,7 +470,7 @@ class ClassUpdate(QWidget):
             self.files.append(f)
             self.ref.append(references)
         self.label = QLabel('Select, add of delete a reference')
-        self.label.setFont(QFont('Arial', 13, QFont.Bold))
+        self.label.setFont(QFont('Arial', 13, weight=75))
 
         self.labels = []
         self.comboBox = []
@@ -502,9 +492,9 @@ class ClassUpdate(QWidget):
                 self.comboBox[i].addItem(self.files[i][j])
                 item = self.comboBox[i].model().item(j, 0)
                 if self.ref[i][j] == 'T':
-                    item.setCheckState(Qt.Checked)
+                    item.setCheckState(Qt.CheckState.Checked)
                 else:
-                    item.setCheckState(Qt.Unchecked)
+                    item.setCheckState(Qt.CheckState.Unchecked)
             self.grid.addWidget(self.labels[i], i + 1, 0)
             self.grid.addWidget(self.comboBox[i], i + 1, 1)
             self.grid.addWidget(self.refButtons[i], i + 1, 2)
@@ -521,8 +511,7 @@ class ClassUpdate(QWidget):
 
     def addRef(self, aSpecies):
         # create a new window + select ref file as csv of fcs
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.Option.DontUseNativeDialog  # TODO: Not sure if it will work, check changes to restore
         file, _ = QFileDialog.getOpenFileNames(self, "Select reference file for " + aSpecies, "",
                                                "All Files (*csv *fcs);;CSV Files (*.csv);;FCS Files (*.fcs)",
                                                options=options)
@@ -604,12 +593,14 @@ class DelReference(QWidget):
         if self.todel:
             buttonReply = QMessageBox.question(self, 'Delete reference data',
                                                'Do you want to delete ' + j.join(l) + '?',
-                                               QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if buttonReply == QMessageBox.Yes:
+                                               QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                               QMessageBox.StandardButton.No)
+            if buttonReply == QMessageBox.StandardButton.Yes:
                 if self.aClass == 'null':
                     for one in l:
                         db.delClass(one)
                 elif self.aRecord is None:
+
                     for one in l:
                         db.delRecord(self.aClass, one)
                 else:
@@ -631,7 +622,7 @@ class DelReference(QWidget):
     def addTeacher(self, species, i):
         self.teachersSelect.addItem(species)
         item = self.teachersSelect.model().item(i, 0)
-        item.setCheckState(Qt.Unchecked)
+        item.setCheckState(Qt.CheckState.Unchecked)
 
 
 class CreateEntry(QWidget):
@@ -666,8 +657,9 @@ class CreateEntry(QWidget):
     def createAction(self):
         name = self.textbox.text()
         message = QMessageBox.question(self, 'Create Entry', "Do you want to create a new entry \n" + name + '?',
-                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if message == QMessageBox.Yes:
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                       QMessageBox.StandardButton.No)
+        if message == QMessageBox.StandardButton.Yes:
             if self.aClass is None:
                 exist = db.addClass(name)
                 if exist:
@@ -688,7 +680,8 @@ class CreateEntry(QWidget):
         else:
             self.close()
 
-########################################  SETTING WINDOW
+
+#  SETTING WINDOW
 
 
 class SettingWindow(QWidget):
@@ -711,19 +704,18 @@ class SettingWindow(QWidget):
         self.layout.addWidget(self.scrollArea)
 
         title = QLabel('Advanced parameters')
-        title.setAlignment(Qt.AlignCenter)
-        title.setFont(QFont("Century Gothic", 15, QFont.Bold))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setFont(QFont("Century Gothic", 15, weight=75))
         self.fig = ['Save', 'Show', 'None']
         self.gat = ['None', 'Line', 'Machine']
         self.met = ['Neural network', 'Random forest', 'Logistic regression', 'Random guess']
-        #self.graphOption = ['FSC-A', 'SSC-A', 'FL1-A', 'FL2-A', 'FL3-A', 'FL4-A', 'FSC-H', 'SSC-H', 'FL1-H', 'FL2-H',
-                         #   'FL3-H', 'FL4-H', 'Width']
+        # self.graphOption = ['FSC-A', 'SSC-A', 'FL1-A', 'FL2-A', 'FL3-A', 'FL4-A', 'FSC-H', 'SSC-H', 'FL1-H', 'FL2-H',
+        #   'FL3-H', 'FL4-H', 'Width']
         channels, self.graphOption, dic = db.getChannels()
 
         repeatL = QLabel('Number of runs ')
         self.repeat = QSpinBox(self)
         self.repeat.setRange(1, 50)
-
 
         averageL = QLabel('Create average prediction from runs')
         self.average = QCheckBox()
@@ -739,7 +731,7 @@ class SettingWindow(QWidget):
         ratioL = QLabel('Test size')
         self.ratio = QDoubleSpinBox()
         self.ratio.setRange(0, 2)
-        self.ratio.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
+        self.ratio.setStepType(QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
         figureL = QLabel('Figures view mode')
         self.figure = QComboBox()
         self.figure.addItems(self.fig)
@@ -757,9 +749,8 @@ class SettingWindow(QWidget):
         self.showGatL = QLabel('Show gating effect')
         self.clustDist = QDoubleSpinBox(self)
         self.clustDist.setRange(0, 5)
-        self.clustDist.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
+        self.clustDist.setStepType(QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
         self.clustDistL = QLabel('Cluster distance %')
-
         self.axesL = QLabel('Select 3D graph axes')
         self.axe1 = QComboBox()
         self.axe1.addItems(self.graphOption)
@@ -767,7 +758,6 @@ class SettingWindow(QWidget):
         self.axe2.addItems(self.graphOption)
         self.axe3 = QComboBox()
         self.axe3.addItems(self.graphOption)
-
         self.grid.addWidget(title, 0, 0, 1, 4)
         self.grid.addWidget(repeatL, 1, 0)
         self.grid.addWidget(self.repeat, 1, 1)
@@ -793,9 +783,8 @@ class SettingWindow(QWidget):
         self.grid.addWidget(self.axe1, 5, 1)
         self.grid.addWidget(self.axe2, 6, 1)
         self.grid.addWidget(self.axe3, 7, 1)
-        self.grid.addWidget(self.clustDistL, 8,0 )
+        self.grid.addWidget(self.clustDistL, 8, 0)
         self.grid.addWidget(self.clustDist, 8, 1)
-
         self.grid.addWidget(self.ok, 9, 0, 2, 2)
         self.grid.addWidget(self.default, 9, 2, 2, 2)
         self.setWindowTitle("Settings")
@@ -810,13 +799,13 @@ class SettingWindow(QWidget):
             db.removeUnusedParam()
         self.repeat.setValue(int(db.getParamValue('reapt')))
         checked = db.getParamValue('average')
-        if checked == 'True' or checked == 1 or checked == True:
+        if checked == 'True' or checked == 1 or checked:
             v = 1
         else:
             v = 0
         self.average.setChecked(v)
         checked2 = db.getParamValue('showGat')
-        if checked2 == 'True' or checked2 == 1 or checked2 == True:
+        if checked2 == 'True' or checked2 == 1 or checked2:
             v2 = 1
         else:
             v2 = 0
@@ -871,20 +860,19 @@ class SettingWindow(QWidget):
         self.maj(False)
 
 
-#################### PARAM FLOW CYTOMETER
+# PARAM FLOW CYTOMETER
 
 
 class ConfigFlowcytometer(QWidget):
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self)
-
         self.fcList = db.getFlowcytometerList()
         self.setWindowIcon(QIcon('logo.png'))
         self.setWindowTitle('Flow cytometer configuration')
         self.resize(300, 300)
         self.move(500, 200)
         self.label = QLabel('Select the active flow cytometer')
-        self.label.setFont(QFont('Arial', 13, QFont.Bold))
+        self.label.setFont(QFont('Arial', 13, weight=75))
         db.updateFc()
         self.labelClass = QLabel('\nConfigure a flow cytometer')
         self.aClassQ = QComboBox()
@@ -893,7 +881,7 @@ class ConfigFlowcytometer(QWidget):
         # todo del the fc name if id not in channels column fcid
 
         v = db.getFcValue()
-        if v != []:
+        if v:
             self.aClassQ.setCurrentIndex(self.fcList.index(v))
 
         self.buttonAdd = QPushButton('Add a flow cytometer')
@@ -910,20 +898,22 @@ class ConfigFlowcytometer(QWidget):
         layout.addWidget(self.label, 0, 0, 1, 2)
         layout.addWidget(self.aClassQ, 1, 0, 1, 2)
         layout.addWidget(self.labelClass, 2, 0)
-        layout.addWidget(self.ok, 4, 0,1,2)
-        layout.addWidget(self.buttonAdd, 3, 0,1,2)
-        layout.addWidget(self.buttonDel, 5, 0,1,2)
+        layout.addWidget(self.ok, 4, 0, 1, 2)
+        layout.addWidget(self.buttonAdd, 3, 0, 1, 2)
+        layout.addWidget(self.buttonDel, 5, 0, 1, 2)
         layout.addWidget(self.closeB, 6, 1)
-        layout.addWidget(self.ok1,6,0)
+        layout.addWidget(self.ok1, 6, 0)
         self.setLayout(layout)
         self.show()
 
     def addClass(self):
         self.newWindow = CreateFc(parent=self)
         self.close()
+
     def delClass(self):
         self.newWwindow = DeleteFc(parent=self)
         self.close()
+
     def closeW(self):
         self.close()
 
@@ -937,11 +927,11 @@ class ConfigFlowcytometer(QWidget):
         db.desactivateFc()
         db.saveFc(self.fcList[self.aClassQ.currentIndex()])
         db.removeUnusedParam()
-        if db.getFcValue() !=[]:
+        if db.getFcValue():
             self.aClassQ.setCurrentIndex(self.fcList.index(db.getFcValue()))
 
-    #todo faire une fenetre ou on peut rentrer les parametres de la base de donnée
-
+    # todo faire une fenetre ou on peut rentrer les parametres de la base de donnée
+    # TODO: What's above?
 
 class Update(QWidget):
     def __init__(self, parent=None):
@@ -957,7 +947,6 @@ class Update(QWidget):
 
         self.label2 = QLabel('Name ')
 
-
         self.ok = QPushButton('Ok')
         self.ok.clicked.connect(partial(self.inputData))
         self.layout = QGridLayout()
@@ -966,20 +955,19 @@ class Update(QWidget):
         self.layout.addWidget(self.ok, 2, 1)
         self.setLayout(self.layout)
 
-
         self.show()
 
     def inputData(self):
         name = self.parent.fcList[self.fcNames.currentIndex()]
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        file, _ = QFileDialog.getOpenFileName(self, "Data selection", "Select data file for flow cytometer configuration",
-                                                  "All Files (*csv *fcs);;CSV Files (*.csv);;FCS Files (*.fcs)",
-                                                  options=options)
+        options = QFileDialog.Option.DontUseNativeDialog  # TODO: Not sure if it will work, check changes to restore
+        file, _ = QFileDialog.getOpenFileName(self, "Data selection",
+                                              "Select data file for flow cytometer configuration",
+                                              "All Files (*csv *fcs);;CSV Files (*.csv);;FCS Files (*.fcs)",
+                                              options=options)
         if file:
             self.file = file
             channels = r.getChannelsFromFile(file)
-            self.window = UpdateFc(name, channels,True)
+            self.window = UpdateFc(name, channels, True)
 
 
 class CreateFc(QWidget):
@@ -1006,13 +994,15 @@ class CreateFc(QWidget):
 
     def createAction(self):
         self.name = self.textbox.text()
-        message = QMessageBox.question(self, 'Create FC', "Do you want to create a new flow cytometer \n" + self.name + '?',
-                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if message == QMessageBox.Yes:
+        message = QMessageBox.question(self, 'Create FC',
+                                       "Do you want to create a new flow cytometer \n" + self.name + '?',
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                       QMessageBox.StandardButton.No)
+        if message == QMessageBox.StandardButton.Yes:
             exist = db.addFc(self.name)
             if exist:
                 msg = QMessageBox.warning(self, 'Impossible to create the class.',
-                                              "Class " + self.name + " alredy exsist ")
+                                          "Class " + self.name + " alredy exsist ")
             else:
                 self.parent.close()
                 self.close()
@@ -1021,19 +1011,18 @@ class CreateFc(QWidget):
         self.close()
 
     def openFileNameDialog(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.Option.DontUseNativeDialog  # TODO: Not sure if it will work, check changes to restore
         file, _ = QFileDialog.getOpenFileName(self, "Select data file for flow cytometer configuration", "",
-                                                "All Files (*csv *fcs);;CSV Files (*.csv);;FCS Files (*.fcs)",
-                                                options=options)
+                                              "All Files (*csv *fcs);;CSV Files (*.csv);;FCS Files (*.fcs)",
+                                              options=options)
         if file:
             self.file = file
-        else :
+        else:
             self.file = ''
             return
         j = '\n'
         channels = r.getChannelsFromFile(file)
-        self.window = UpdateFc(self.name,channels)
+        self.window = UpdateFc(self.name, channels)
         self.window.show()
 
 
@@ -1062,17 +1051,19 @@ class DeleteFc(QWidget):
     def createAction(self):
         fcName = self.parent.fcList[self.fcNames.currentIndex()]
         message = QMessageBox.question(self, 'Delete FC', "Do you want to delete \n" + fcName + '?',
-                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if message == QMessageBox.Yes:
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                       QMessageBox.StandardButton.No)
+        if message == QMessageBox.StandardButton.Yes:
             db.delFc(fcName)
-            msg= QMessageBox.information(self,'Flow cytometer deleted','The flow cytometer '+fcName+' is removed from the database.')
+            msg = QMessageBox.information(self, 'Flow cytometer deleted',
+                                          'The flow cytometer ' + fcName + ' is removed from the database.')
         self.window = ConfigFlowcytometer()
         self.window.show()
         self.close()
 
 
 class UpdateFc(QWidget):
-    def __init__(self, name,channels=None,update=False):
+    def __init__(self, name, channels=None, update=False):
         QWidget.__init__(self)
         self.layout = QHBoxLayout(self)
         self.setWindowIcon(QIcon('logo.png'))
@@ -1088,7 +1079,7 @@ class UpdateFc(QWidget):
         self.update = update
         self.setWindowTitle('Channels selection')
         self.channels = channels
-        self.ref_channels,self.ref_desc = db.getRefChannels()
+        self.ref_channels, self.ref_desc = db.getRefChannels()
 
         self.resize(900, 400)
         self.move(500, 200)
@@ -1097,8 +1088,9 @@ class UpdateFc(QWidget):
         self.comboBox = []
         self.refButtons = []
         self.delButtons = []
-        self.label = QLabel('In order to do the line gating, please indicate which \nof your channels correpond to the indicated channels below:')
-        self.label.setFont(QFont('Arial', 13, QFont.Bold))
+        self.label = QLabel('In order to do the line gating, please indicate which \nof your channels correspond to '
+                            'the indicated channels below:')
+        self.label.setFont(QFont('Arial', 13, weight=75))
         self.grid.addWidget(self.label, 0, 0, 1, 2)
         i = 0
         self.aClassQ = QComboBox()
@@ -1121,30 +1113,30 @@ class UpdateFc(QWidget):
 
     def validate(self):
         self.res = []
-        #todo befor or after openning the good window, add in the data base
+        # todo befor or after openning the good window, add in the data base
         # validate only if the choosen ref are not in double
         for i in range(len(self.ref_channels)):
-            self.v=self.comboBox[i].currentIndex()
+            self.v = self.comboBox[i].currentIndex()
             if self.v not in self.res:
                 self.res.append(self.comboBox[i].currentIndex())
-            else :
+            else:
                 msg = QMessageBox.warning(self, 'Data Warning', 'A channel can be used only once per reference channel')
                 return
 
-        self.window = ChannelSelect(self.fc,self.ref_channels,self.channels,self.res,self.update)
+        self.window = ChannelSelect(self.fc, self.ref_channels, self.channels, self.res, self.update)
         self.window.show()
         self.close()
 
     def updateFields(self):
         for i in range(len(self.ref_channels)):
-            v=db.getCnFromRef(self.ref_channels[i],self.fc)
+            v = db.getCnFromRef(self.ref_channels[i], self.fc)
             if v in self.channels:
                 self.comboBox[i].setCurrentIndex(self.channels.index(v))
 
 
 class ChannelSelect(QWidget):
 
-    def __init__(self, fc, ref_channels,channels,values,update):
+    def __init__(self, fc, ref_channels, channels, values, update):
         QWidget.__init__(self)
         self.layout = QHBoxLayout(self)
         self.setWindowIcon(QIcon('logo.png'))
@@ -1163,8 +1155,8 @@ class ChannelSelect(QWidget):
         self.update = update
 
         self.Title = QLabel('Select the channels used in your analysis')
-        self.Title.setFont(QFont('Arial', 13, QFont.Bold))
-        self.checkbox=[]
+        self.Title.setFont(QFont('Arial', 13, weight=75))
+        self.checkbox = []
         self.label = []
         self.label2 = []
         for i in range(len(channels)):
@@ -1191,10 +1183,11 @@ class ChannelSelect(QWidget):
             self.grid.addWidget(self.label[i], i + 3, 0)
             self.grid.addWidget(self.checkbox[i], i + 3, 1)
             self.grid.addWidget(self.label2[i], i + 3, 2)
-        self.grid.addWidget(self.ok, i+5, 2)
+        self.grid.addWidget(self.ok, i + 5, 2)  # TODO: What?
 
     def validate(self):
-        #todo ajouter à la base de données toute les valeures
+        # todo ajouter à la base de données toute les valeures
+        # TODO: What's above?
         channels = []
         ref = []
 
@@ -1208,14 +1201,14 @@ class ChannelSelect(QWidget):
         print(channels)
         print(ref)
         print(self.update)
-        db.addChannels(self.fc,channels,ref,self.update)
-        msg = QMessageBox.information(self, 'Success', "The flow cytometer is created: \nDon't forget to select it as the current flow cytometer!")
+        db.addChannels(self.fc, channels, ref, self.update)
+        msg = QMessageBox.information(self, 'Success',
+                                      "The flow cytometer is created: \nDon't forget to select it as the current flow "
+                                      "cytometer!")
 
         self.window = ConfigFlowcytometer()
         self.window.show()
         self.close()
-
-##########################################
 
 
 class CheckableComboBox(QComboBox):
@@ -1240,10 +1233,10 @@ class CheckableComboBox(QComboBox):
 
     def handleItemPressed(self, index):
         item = self.model().itemFromIndex(index)
-        if item.checkState() == Qt.Checked:
-            item.setCheckState(Qt.Unchecked)
+        if item.checkState() == Qt.CheckState.Checked:
+            item.setCheckState(Qt.CheckState.Unchecked)
         else:
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.CheckState.Checked)
         self.on_selectedItems()
         if self.parent.state is not None:
             self.enoughSp()
@@ -1254,14 +1247,14 @@ class CheckableComboBox(QComboBox):
         for index in range(self.count()):
 
             item = self.model().item(index)
-            if item.checkState() == Qt.Checked:
+            if item.checkState() == Qt.CheckState.Checked:
                 cnt = cnt + 1
                 checkedItems.append(item)
         self.checked = cnt
         for index in range(self.count()):
             item = self.model().item(index)
             if cnt == self.maxCheckable:
-                if item.checkState() == Qt.Unchecked:
+                if item.checkState() == Qt.CheckState.Unchecked:
                     item.setEnabled(False)
             else:
                 item.setEnabled(True)
@@ -1278,25 +1271,24 @@ class CheckableComboBox(QComboBox):
         pos = []
         for index in range(self.count()):
             item = self.model().item(index)
-            if item.checkState() == Qt.Checked:
+            if item.checkState() == Qt.CheckState.Checked:
                 pos.append(index)
         return pos
 
-###########################################################################
-logf = open('error.log', 'a')
 
 if __name__ == '__main__':
     try:
         app = QApplication(sys.argv)
         app.setStyle('Fusion')
         palette = QPalette()
-        palette.setColor(QPalette.Button, Qt.gray)
-        palette.setColor(QPalette.Window, QColor(199,229,242))
-        palette.setColor(QPalette.WindowText, QColor(31,71,85))
+        palette.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.gray)
+        palette.setColor(QPalette.ColorRole.Window, QColor(199, 229, 242))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(31, 71, 85))
         app.setPalette(palette)
         start = MainWindow()
         start.show()
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     except Exception as e:
-        logf.write(str(e))
-        logf.close()
+        with open("error.log", "a") as log:
+            log.write(str(datetime.today()) + ": " + str(e) + "\n")
+            # TODO: If possible, add extra information to logs
