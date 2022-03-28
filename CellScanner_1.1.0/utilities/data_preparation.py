@@ -22,9 +22,11 @@ class DataPreparation:
         self.files_list.append(file)
 
     def __convert(self, file: str) -> None:
-        if file.split(".")[-1] == "fcs":  # TODO: Add extra formats just in case
+        extension = file.split(".")[-1]
+        if extension == "fcs":
             meta, self.data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
-        self.data["Species"] = file.split("/")[-1].split(".")[0]
+        # TODO: Add extra formats just in case
+        self.data["Species"] = file.split("/")[-1].split(".")[0]    # TODO: Remove later
 
     def __drop_columns(self, col_names: list = None) -> None:
         if self.col_names is None:
@@ -35,7 +37,8 @@ class DataPreparation:
         for column in self.data.select_dtypes(include=[np.number]).columns:
             with np.errstate(divide="ignore"):
                 self.data[column] = np.log10(self.data[column].values)
-        self.data.replace([np.inf, -np.inf], 0, inplace=True)
+        self.data.replace([np.inf, -np.inf], np.nan, inplace=True)
+        self.data.dropna(inplace=True)
 
     def __aggregate(self) -> None:
         if self.aggregated is not None:
