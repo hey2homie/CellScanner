@@ -16,14 +16,14 @@ class MainWindow(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.setWindowTitle("CellScanner")
         self.resize(250, 450)
         self.move(50, 200)
         db.updateReferenceInfo()
         self.label = QLabel("CellScanner")
         self.label2 = QLabel()
-        self.img = QPixmap('logo.png')
+        self.img = QPixmap('icons/logo.png')
         self.img = self.img.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio,
                                    Qt.TransformationMode.FastTransformation)
         self.label2.setPixmap(self.img)
@@ -61,17 +61,17 @@ class MainWindow(QMainWindow):
         self.toolbarFunction()
 
     def toolbarFunction(self):
-        exitAct = QAction(QIcon('exit.png'), 'Exit', self)
+        exitAct = QAction(QIcon('icons/exit.png'), 'Exit', self)
         exitAct.setShortcut('Ctrl+Q')
         exitAct.triggered.connect(self.closeA)
-        exitAct2 = QAction(QIcon('param.png'), 'Parameter', self)
+        exitAct2 = QAction(QIcon('icons/param.png'), 'Parameter', self)
         exitAct2.setShortcut('Ctrl+p')
         exitAct2.triggered.connect(self.clickS)
-        helpAct = QAction(QIcon('help.png'), 'Help', self)
+        helpAct = QAction(QIcon('icons/help.png'), 'Help', self)
         helpAct.setShortcut('Ctrl+h')
         helpAct.triggered.connect(self.clickH)
 
-        fcAct = QAction(QIcon('fc.png'), 'Flow cytometer', self)
+        fcAct = QAction(QIcon('icons/fc.png'), 'Flow cytometer', self)
         fcAct.triggered.connect(self.clickFc)
         self.toolbar = self.addToolBar('Exit')
         self.toolbar.addAction(exitAct)
@@ -140,7 +140,7 @@ class WindowPredictAssess(QWidget):
             self.show()
             self.close()
             return
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.state = state
         if self.state == 'clustering':
             self.setWindowTitle('Clustering step 1/4')
@@ -227,7 +227,7 @@ class WindowPredictAssess(QWidget):
 class WindowLPF(QWidget):
     def __init__(self, parent=None, speciesPosition=[], *args, **kwargs):
         QWidget.__init__(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.parent = parent
         self.state = self.parent.state
         self.species = self.parent.record
@@ -357,7 +357,7 @@ class WindowCalculation(QWidget):
         QWidget.__init__(self)
 
         self.grid = QGridLayout()
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.parent = parent
         self.directory = 'None'
         self.setWindowTitle('Calculation')
@@ -393,7 +393,7 @@ class WindowUpdate(QWidget):
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self)
         classList = db.getClassNames()
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.setWindowTitle('Update reference data')
         self.resize(300, 300)
         self.move(500, 200)
@@ -446,7 +446,7 @@ class ClassUpdate(QWidget):
     def __init__(self, aClass):
         QWidget.__init__(self)
         self.layout = QHBoxLayout(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
@@ -550,7 +550,7 @@ class ClassUpdate(QWidget):
 class DelReference(QWidget):
     def __init__(self, parent, aClass, aRecord=None, *args, **kwargs):
         QWidget.__init__(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.state = None
         self.aClass = aClass
         self.parent = parent
@@ -628,7 +628,7 @@ class DelReference(QWidget):
 class CreateEntry(QWidget):
     def __init__(self, aClass=None, parent=None):
         QWidget.__init__(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.parent = parent
         self.aClass = aClass
         self.setWindowTitle('Create a new entry')
@@ -694,7 +694,7 @@ class SettingWindow(QWidget):
             self.show()
             self.close()
             return
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.layout = QHBoxLayout(self)
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
@@ -867,7 +867,7 @@ class ConfigFlowcytometer(QWidget):
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self)
         self.fcList = db.getFlowcytometerList()
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.setWindowTitle('Flow cytometer configuration')
         self.resize(300, 300)
         self.move(500, 200)
@@ -936,7 +936,7 @@ class ConfigFlowcytometer(QWidget):
 class Update(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.parent = parent
         self.setWindowTitle('FC selection for update')
         self.resize(500, 100)
@@ -973,7 +973,7 @@ class Update(QWidget):
 class CreateFc(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.parent = parent
         self.setWindowTitle('Create a new flow cytometer')
         self.resize(500, 100)
@@ -1029,7 +1029,7 @@ class CreateFc(QWidget):
 class DeleteFc(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
 
         self.parent = parent
         self.setWindowTitle('Delete a flow cytometer')
@@ -1066,7 +1066,7 @@ class UpdateFc(QWidget):
     def __init__(self, name, channels=None, update=False):
         QWidget.__init__(self)
         self.layout = QHBoxLayout(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
@@ -1139,7 +1139,7 @@ class ChannelSelect(QWidget):
     def __init__(self, fc, ref_channels, channels, values, update):
         QWidget.__init__(self)
         self.layout = QHBoxLayout(self)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
@@ -1214,7 +1214,7 @@ class ChannelSelect(QWidget):
 class CheckableComboBox(QComboBox):
     def __init__(self, parent=None):
         super(CheckableComboBox, self).__init__(parent)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('icons/logo.png'))
         self.parent = parent
         self.maxCheckable = 100
         self.checked = 0

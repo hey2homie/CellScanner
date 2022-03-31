@@ -1,72 +1,40 @@
 import pandas as pd
 import numpy as np
 import math
-#import lime#lime
-#import sklearn#lime
-#import sklearn.ensemble#lime
-#import sklearn.metrics#lime
-#import lime.lime_tabular#lime
-#from sklearn.pipeline import make_pipeline#lime
-#import eli5
-#from eli5.sklearn import PermutationImportance
-#from scipy.stats import spearmanr
-#from scipy.cluster import hierarchy
-#from sklearn.inspection import permutation_importance
-# from scipy import stats
 import random as rand
 import fcsparser
-import os
-import os
+import lime
 from datetime import datetime
-import sys
 import statistics as stat
-import matplotlib.pyplot as plt
 import warnings
-from sklearn import svm
-from sklearn.model_selection import train_test_split
-from sklearn.utils.multiclass import unique_labels
-from matplotlib.colors import Normalize
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.gaussian_process import GaussianProcessClassifier
 import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QWidget, QMessageBox, QApplication
-
+from PyQt6.QtWidgets import QWidget, QMessageBox
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
-
-from sklearn.model_selection import StratifiedShuffleSplit  # cross validation
-from sklearn.model_selection import GridSearchCV  # randomforest
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from mpl_toolkits.mplot3d import Axes3D  # Needed
-from sklearn.semi_supervised import LabelPropagation
 import matplotlib.gridspec as gridspec
-#import runScript as r
-from sklearn import svm
 from sklearn.model_selection import train_test_split
-from sklearn.utils.multiclass import unique_labels
+
 
 def fcstocsv(file):
-    if file[-3:]=='fcs':
+    if file[-3:] == 'fcs':
         meta, data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
         pd_data = pd.DataFrame(data)
-        dummystring2 = str(file[:-4]+ ".csv")
-        pd_data.to_csv(dummystring2,sep=';',index=False)
+        dummystring2 = str(file[:-4] + ".csv")
+        pd_data.to_csv(dummystring2, sep=';', index=False)
 
 
-
-
-def visualize(filename, axes=['FL1-A', 'FL3-A'], cd='',save=False): #['FL1-A', 'FL3-A']
+def visualize(filename, axes=('FL1-A', 'FL3-A'), cd='', save=False):  # ['FL1-A', 'FL3-A']
     txt = filename.copy()
     for i in range(len(filename)):
         filename[i] = cd + filename[i]
     arrays = importFile(filename, gating=None)
-    all=pd.concat(arrays)
-    #arrays.append(all)
-    arrays=[all]
+    all = pd.concat(arrays)
+    # arrays.append(all)
+    arrays = [all]
     x = axes[0]
     y = axes[1]
     for i in range(len(arrays)):
@@ -77,7 +45,7 @@ def visualize(filename, axes=['FL1-A', 'FL3-A'], cd='',save=False): #['FL1-A', '
         plt.scatter(A[x], A[y], s=0.2)
         plt.title(txt[i])
         if save:
-            plt.savefig(cd+txt[i][:-4])
+            plt.savefig(cd + txt[i][:-4])
         else:
             plt.show()
         plt.close()
@@ -90,13 +58,11 @@ def addSpeciesTag(narray, species):
 
 def gatingFunction(narray, save=None, filename='', cwd='', fc='Accuri'):  # graph change FL2 to FL3
     labels = []
-    A = narray.loc[:, ['FL1-A', 'FL3-A','FSC-A','FSC-H']].copy()
+    A = narray.loc[:, ['FL1-A', 'FL3-A', 'FSC-A', 'FSC-H']].copy()
     A.loc[:, 'FL1-A'] = np.log10(A.loc[:, 'FL1-A'])
     A.loc[:, 'FL3-A'] = np.log10(A.loc[:, 'FL3-A'])
     A.loc[:, 'FSC-A'] = np.log10(A.loc[:, 'FSC-A'])
     A.loc[:, 'FSC-H'] = np.log10(A.loc[:, 'FSC-H'])
-
-
 
     if 'Accuri' in fc or 'accuri' in fc:
         for row in list(narray.index):
@@ -108,8 +74,9 @@ def gatingFunction(narray, save=None, filename='', cwd='', fc='Accuri'):  # grap
             elif narray.loc[row, 'FSC-A'] > 100000 and narray.loc[row, 'SSC-A'] > 10000:
                 narray = narray.drop([row])
                 labels.append(0)
-            elif 'FSC-H' in list(narray.columns) and (np.log10(narray.loc[row, 'FSC-A']) > (np.log10(narray.loc[row, 'FSC-H']) + 0.5) \
-                    or np.log10(narray.loc[row, 'FSC-A']) < ( np.log10(narray.loc[row, 'FSC-H']) -0.5)):
+            elif 'FSC-H' in list(narray.columns) and (
+                    np.log10(narray.loc[row, 'FSC-A']) > (np.log10(narray.loc[row, 'FSC-H']) + 0.5) \
+                    or np.log10(narray.loc[row, 'FSC-A']) < (np.log10(narray.loc[row, 'FSC-H']) - 0.5)):
                 narray = narray.drop([row])
                 labels.append(0)
 
@@ -127,8 +94,9 @@ def gatingFunction(narray, save=None, filename='', cwd='', fc='Accuri'):  # grap
             # elif narray.loc[row, 'FSC-A'] > 100000 and narray.loc[row, 'SSC-A'] > 10000:
             #   narray = narray.drop([row])
             #  labels.append(0)
-            elif 'FSC-H' in list(narray.columns) and (np.log10(narray.loc[row, 'FSC-A']) > (np.log10(narray.loc[row, 'FSC-H']) + 0.6) \
-                    or np.log10(narray.loc[row, 'FSC-A']) < (np.log10(narray.loc[row, 'FSC-H']) -0.6)):
+            elif 'FSC-H' in list(narray.columns) and (
+                    np.log10(narray.loc[row, 'FSC-A']) > (np.log10(narray.loc[row, 'FSC-H']) + 0.6)
+                    or np.log10(narray.loc[row, 'FSC-A']) < (np.log10(narray.loc[row, 'FSC-H']) - 0.6)):
                 narray = narray.drop([row])
                 labels.append(0)
             else:
@@ -137,8 +105,8 @@ def gatingFunction(narray, save=None, filename='', cwd='', fc='Accuri'):  # grap
         for row in list(narray.index):
             if math.isnan(np.log10(narray.loc[row, 'FL3-A'])) or math.isnan(np.log10(narray.loc[row, 'FL1-A'])) \
                     or np.log10(narray.loc[row, 'FSC-A']) > (np.log10(narray.loc[row, 'FSC-H']) + 0.5) \
-                    or np.log10(narray.loc[row, 'FSC-A']) < (np.log10(narray.loc[row, 'FSC-H']) -0.5)\
-                    or narray.loc[row, 'FL1-H']<500:
+                    or np.log10(narray.loc[row, 'FSC-A']) < (np.log10(narray.loc[row, 'FSC-H']) - 0.5) \
+                    or narray.loc[row, 'FL1-H'] < 500:
                 narray = narray.drop([row])
                 labels.append(0)
 
@@ -209,11 +177,13 @@ def logisticRegression(data, target, ratio, logReg='l2', asolver='lbfgs', random
     known_lbl = test_lbl.values.tolist()
     return predict_lbl, known_lbl, scaler, logisticRegr, test_data
 
-def explainer(model,testData,testLabel,features,sp=[],scaler=''):
-    #testData=testData.values
-    #testData=testData.astype('float32')
-    testData=scaler.transform(testData)
-    explainer = lime.lime_tabular.LimeTabularExplainer(testData, feature_names=features, class_names=testLabel, discretize_continuous=True)
+
+def explainer(model, testData, testLabel, features, sp=[], scaler=''):
+    # testData=testData.values
+    # testData=testData.astype('float32')
+    testData = scaler.transform(testData)
+    explainer = lime.lime_tabular.LimeTabularExplainer(testData, feature_names=features, class_names=testLabel,
+                                                       discretize_continuous=True)
     i = np.random.randint(0, testData.shape[0])
     exp = explainer.explain_instance(testData[i], model.predict_proba, num_features=13, top_labels=2)
 
@@ -221,29 +191,29 @@ def explainer(model,testData,testLabel,features,sp=[],scaler=''):
 
     # Only showing part of output for better printing
 
-    #fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
-    #corr = spearmanr(testData).correlation
-    #corr_linkage = hierarchy.ward(corr)
-    #dendro = hierarchy.dendrogram(corr_linkage, labels=features, ax=ax1, leaf_rotation=90)
-    #dendro_idx = np.arange(0, len(dendro['ivl']))
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
+    # corr = spearmanr(testData).correlation
+    # corr_linkage = hierarchy.ward(corr)
+    # dendro = hierarchy.dendrogram(corr_linkage, labels=features, ax=ax1, leaf_rotation=90)
+    # dendro_idx = np.arange(0, len(dendro['ivl']))
 
-    #ax2.imshow(corr[dendro['leaves'], :][:, dendro['leaves']])
-    #ax2.set_xticks(dendro_idx)
-    #ax2.set_yticks(dendro_idx)
-    #ax2.set_xticklabels(dendro['ivl'], rotation='vertical')
-    #ax2.set_yticklabels(dendro['ivl'])
-    #fig.tight_layout()
-    #plt.show()
-    #perm = PermutationImportance(model, random_state=1).fit(testData, testLabel)
-    #print(eli5.format_as_text(eli5.explain_weights(perm)))
-    #r = permutation_importance(model, testData, testLabel,n_repeats = 50,random_state = 0)
-    #f = open('Results/importance.csv', 'a')
-    #sep=' '
-    #sep2=';'
-    #f.write(sep.join(sp) + ';'+ sep2.join(features)+'\n')
-    #m=['mean']
-    #std=['std']
-    #for i in range(len(features)):
+    # ax2.imshow(corr[dendro['leaves'], :][:, dendro['leaves']])
+    # ax2.set_xticks(dendro_idx)
+    # ax2.set_yticks(dendro_idx)
+    # ax2.set_xticklabels(dendro['ivl'], rotation='vertical')
+    # ax2.set_yticklabels(dendro['ivl'])
+    # fig.tight_layout()
+    # plt.show()
+    # perm = PermutationImportance(model, random_state=1).fit(testData, testLabel)
+    # print(eli5.format_as_text(eli5.explain_weights(perm)))
+    # r = permutation_importance(model, testData, testLabel,n_repeats = 50,random_state = 0)
+    # f = open('Results/importance.csv', 'a')
+    # sep=' '
+    # sep2=';'
+    # f.write(sep.join(sp) + ';'+ sep2.join(features)+'\n')
+    # m=['mean']
+    # std=['std']
+    # for i in range(len(features)):
     #    m.append(str(r.importances_mean[i]))
     #    std.append(str(r.importances_std[i]))
     #    if r.importances_mean[i] - 2 * r.importances_std[i] > 0:
@@ -253,10 +223,9 @@ def explainer(model,testData,testLabel,features,sp=[],scaler=''):
     #    print(f"{features[i]:<8}"
     #          f"{r.importances_mean[i]:.3f}"
     #          f" +/- {r.importances_std[i]:.3f}")
-    #f.write(sep2.join(m)+'\n')
-    #f.write(sep2.join(std) + '\n')
-    #f.close()
-
+    # f.write(sep2.join(m)+'\n')
+    # f.write(sep2.join(std) + '\n')
+    # f.close()
 
 
 def neuralNetwork(data, target, ratio, activation='relu', solver='lbfgs', max_iter=200, random_state=None):
@@ -272,8 +241,8 @@ def neuralNetwork(data, target, ratio, activation='relu', solver='lbfgs', max_it
                          early_stopping=False,
                          learning_rate='constant')
     grid.fit(train_img, train_lbl)
-    features=list(test_data.columns)
-    species=list(set(test_lbl))
+    features = list(test_data.columns)
+    species = list(set(test_lbl))
     # for i in range(0):
     #     explainer = lime.lime_tabular.LimeTabularExplainer(train_img, feature_names=features, class_names=species,
     #                                                        discretize_continuous=True)
@@ -319,16 +288,16 @@ def randomForest(data, target, ratio, n_estimators=200, criterion='gini', random
     # print('BASE ESTIMATOR \n',grid.base_estimator_)
     # print('ESTIMATOR \n',grid.estimators_)
     sp = list(set(target))
-    #print('FEATURE IMPORTANCE\n', grid.feature_importances_)
-    #features = [str(i) for i in list(grid.feature_importances_)]
-    #print(sp)
-    #print(features)
-    #imp = sp + features
-    #print(imp)
+    # print('FEATURE IMPORTANCE\n', grid.feature_importances_)
+    # features = [str(i) for i in list(grid.feature_importances_)]
+    # print(sp)
+    # print(features)
+    # imp = sp + features
+    # print(imp)
     sep = ';'
-    #f = open('Results/importance.csv', 'a')
-    #f.write(sep.join(imp) + '\n')
-    #f.close()
+    # f = open('Results/importance.csv', 'a')
+    # f.write(sep.join(imp) + '\n')
+    # f.close()
     predict = grid.predict(test_img[0:])
     predict_lbl = predict.tolist()
     known_lbl = test_lbl.values.tolist()
@@ -363,7 +332,7 @@ def scalerTest(data, scaler, logisticReg):
 
 
 def statAnalysis(predicted, known, species):  # TO OPTIMIZE I can directly extract the matrix
-    units = ['P', 'N', 'TN', 'TP', 'FN', 'FP','UNKNOWN', 'TPR', 'TNR', 'PPV', 'ACC', 'F1','cACC','cF1']
+    units = ['P', 'N', 'TN', 'TP', 'FN', 'FP', 'UNKNOWN', 'TPR', 'TNR', 'PPV', 'ACC', 'F1', 'cACC', 'cF1']
     res = pd.DataFrame(columns=units, index=species + ['MEAN'])
     for s in species:
         p = 0
@@ -381,8 +350,8 @@ def statAnalysis(predicted, known, species):  # TO OPTIMIZE I can directly extra
                     tp = tp + 1
                 else:
                     fn = fn + 1
-                    if pr =='unknown':
-                        ukn = ukn+1
+                    if pr == 'unknown':
+                        ukn = ukn + 1
             else:
                 n = n + 1
                 if pr == s:
@@ -418,24 +387,24 @@ def statAnalysis(predicted, known, species):  # TO OPTIMIZE I can directly extra
         res.loc[s, 'TP'] = tp
         res.loc[s, 'FN'] = fn
         res.loc[s, 'FP'] = fp
-        res.loc[s,'UNKNOWN']=ukn
+        res.loc[s, 'UNKNOWN'] = ukn
         res.loc[s, 'TPR'] = tpr
         res.loc[s, 'TNR'] = tnr
         res.loc[s, 'PPV'] = ppv
         res.loc[s, 'ACC'] = acc
         res.loc[s, 'F1'] = f1
-        res.loc[s,'cACC']= (tp+tn)/(p+n-ukn)
-        res.loc[s, 'cF1'] =(2*tp)/(2*tp+fp+fn-ukn)
+        res.loc[s, 'cACC'] = (tp + tn) / (p + n - ukn)
+        res.loc[s, 'cF1'] = (2 * tp) / (2 * tp + fp + fn - ukn)
     sum = res.sum(axis=0)
     res.loc['MEAN'] = res.mean(axis=0)
-    #res.loc['MEAN','TPR']= sum([res.iloc[i]['TPR'] for i in range(len(species))])/len(species)
-    #res.loc['MEAN', 'TNR'] = sum([res.iloc[i]['TNR'] for i in range(len(species))])/len(species)
-    #res.loc['MEAN', 'PPV'] = sum([res.iloc[i]['PPV'] for i in range(len(species))])/len(species)
+    # res.loc['MEAN','TPR']= sum([res.iloc[i]['TPR'] for i in range(len(species))])/len(species)
+    # res.loc['MEAN', 'TNR'] = sum([res.iloc[i]['TNR'] for i in range(len(species))])/len(species)
+    # res.loc['MEAN', 'PPV'] = sum([res.iloc[i]['PPV'] for i in range(len(species))])/len(species)
 
     res.loc['MEAN', 'ACC'] = accuracy_score(known, predicted)
     res.loc['MEAN', 'F1'] = f1_score(known, predicted, average='weighted')
-    res.loc['MEAN', 'cACC'] =sum['TP']/(sum['P']-sum['UNKNOWN'])
-    #res.loc['MEAN', 'cF1'] =
+    res.loc['MEAN', 'cACC'] = sum['TP'] / (sum['P'] - sum['UNKNOWN'])
+    # res.loc['MEAN', 'cF1'] =
     res
     return res
 
@@ -591,14 +560,15 @@ def unique(list1):
     c = b.tolist()
     return c
 
-#TODO for machine gating function select the channels name
+
+# TODO for machine gating function select the channels name
 def graph3d(data, predict, target, species, param=[], statistics=None, show='show', cwd='',
             repeat=1, name='', predtype='analysis',
             clust=False):
-    if param==[]:
-        posParam = [1,2,3]
-        clm=list(data.columns)
-        param=[clm[1],clm[2],clm[3]]
+    if param == []:
+        posParam = [1, 2, 3]
+        clm = list(data.columns)
+        param = [clm[1], clm[2], clm[3]]
     else:
         posParam = [data.columns.get_loc(param[0]), data.columns.get_loc(param[1]), data.columns.get_loc(param[2])]
     if statistics is not None:
@@ -869,20 +839,20 @@ def assessmentValue(statValues, species, cwd, sample, typeF):
     f.write('F1;' + str(f1) + ';Standard deviation;' + str(stdf1) + '\n')
     for i in range(len(species)):
         f.write(str(species[i]) + ';Sensitivity;' + str(sens[i]) + ';Standard deviation;' + str(
-            stdSens[i]) +';Specificity;' + str(spec[i]) + ';Standard deviation;' + str(
-            stdSpec[i])+ ';Precision;' + str(prec[i]) + ';Standard deviation;' + str(stdPrec[i]) + '\n\n')
+            stdSens[i]) + ';Specificity;' + str(spec[i]) + ';Standard deviation;' + str(
+            stdSpec[i]) + ';Precision;' + str(prec[i]) + ';Standard deviation;' + str(stdPrec[i]) + '\n\n')
 
 
 def fileOption(cwd, files, species, files2, species2, nbC, nbC2, gating='line', predAn='prediction',
                predtype='neur', ratio=1 / 7.0, repeat=1, average=True,
-               doubt=0, channels=[], dicChannels={},fc='Accuri',type=''):
+               doubt=0, channels=[], dicChannels={}, fc='Accuri', type=''):
     f = open(cwd + 'option.txt', 'a')
     now = datetime.now()
     date = now.strftime("%d/%m/%Y %H:%M")
     if predAn == 'prediction':
-        f.write(type+'Prediction ' + date + '\n')
+        f.write(type + 'Prediction ' + date + '\n')
     else:
-        f.write(type+'Tool analysis ' + date + '\n')
+        f.write(type + 'Tool analysis ' + date + '\n')
     f.write('Class records:\n')
     for sp in set(species):
         f.write('\t- ' + sp + '\n')
@@ -897,7 +867,7 @@ def fileOption(cwd, files, species, files2, species2, nbC, nbC2, gating='line', 
         f.write('Merged file for tool analysis:\n')
         for file, sp in zip(files2, species2):
             f.write('\t- ' + file + ' ->' + sp + '\n')
-    f.write('\Flow cytometer:  '+fc)
+    f.write('\Flow cytometer:  ' + fc)
     f.write('\nSelected channels:\n')
     f.write('\t' + ', '.join(channels) + '\n')
     f.write('Reference channels:\n')
@@ -1031,9 +1001,8 @@ def distance(pav, rav, column=['FSC-A', 'FL1-A', 'FL3-A']):
 
 
 def cmFile(cm, species, cwd, what):
-
     f = open(cwd + 'cmData.csv', 'a')
-    species=[str(i) for i in species]
+    species = [str(i) for i in species]
 
     f.write(what + ':;\n')
     l = len(species)
@@ -1050,7 +1019,7 @@ def cmFile(cm, species, cwd, what):
     f.write('\n Normalized:\n')
     cm2 = cm.copy()
     f.close()
-    f=open(cwd + 'cmData.csv', 'a')
+    f = open(cwd + 'cmData.csv', 'a')
     for i in range(l):
         tot = sum(cm[i])
         for j in range(l):
@@ -1176,7 +1145,7 @@ def machineGating(refArrays, species, predArrays, species2, predType='neur', rat
         return predArrays, species2
 
 
-def importFile(files, gating='None', save='None', fc='Accuri', cwd='', channels=[], dicChannels={},sep =','):
+def importFile(files, gating='None', save='None', fc='Accuri', cwd='', channels=[], dicChannels={}, sep=','):
     """This function import fcs or csv files from there name and convert theme into arrays according to 'fc' either
     Cytoflex or Accuri. The function also select the wanted column. if all column has to be kept, hide the line #'data=data[[]]'#
     :param files: list of filenames (=path is different of current directory)
@@ -1199,11 +1168,11 @@ def importFile(files, gating='None', save='None', fc='Accuri', cwd='', channels=
             data = []
         if 'Time' in list(data.columns):
             data = data.drop(['Time'], axis=1)
-        if dicChannels!= {'':'','':'','':''} and dicChannels!={}:
+        if dicChannels != {'': '', '': '', '': ''} and dicChannels != {}:
             data = data.rename(columns=dicChannels)
         for a in channels:
             if a not in data.columns:
-                #TODO popup only if used as a tool
+                # TODO popup only if used as a tool
                 popup('Wrong flow cytometer',
                       'The flow cytometer is not compatible with the selected data.\n\nPlease check that the selected files are from the selected flow cytometer.')
                 return []
@@ -1213,7 +1182,7 @@ def importFile(files, gating='None', save='None', fc='Accuri', cwd='', channels=
     for i in range(len(arrays)):
         if gating is not None:
             if gating == 'line':
-                arrays[i] = gatingFunction(arrays[i], save=save, filename=files[i],cwd=cwd, fc=fc)
+                arrays[i] = gatingFunction(arrays[i], save=save, filename=files[i], cwd=cwd, fc=fc)
     return arrays
 
 
@@ -1233,7 +1202,6 @@ def treat(someArrays, species, nbC, mode='pred', cluster=False, random_state=Non
     arrays = []
     fusion = []
     for anArray in someArrays:
-
         arrays.append(anArray.copy())
     if mode == 'train' or mode == 'analysis':
         arrays, species = mergeSameSpecies(arrays, species)
@@ -1242,7 +1210,7 @@ def treat(someArrays, species, nbC, mode='pred', cluster=False, random_state=Non
             arrays[i] = randomSelection(arrays[i], nbC, random_state=random_state)
         if cluster:
             arrays[i] = arrays[i].dropna()
-            #arrays[i] = arrays[i].drop(columns=['FL4-A', 'FL4-H'])
+            # arrays[i] = arrays[i].drop(columns=['FL4-A', 'FL4-H'])
             arrays[i] = arrays[i].dropna()
             for j in range(0, len(arrays[i])):
                 for k in range(len(arrays[i].columns)):
