@@ -1,0 +1,5 @@
+QLineEdit {
+    /* TODO: Add slightly different text color */
+    font-size: 16px;
+    text-align: left;
+}

@@ -1,0 +1,9 @@
+QWidget {
+    border-style: solid;
+    border-color: black;
+}
+
+QWidget#settings {
+    border-style: dashed;
+    border-color: yellow;
+}

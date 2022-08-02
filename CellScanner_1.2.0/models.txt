@@ -1,0 +1,341 @@
+V1
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V2
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(512, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V3
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V4
+        model = keras.models.Sequential([
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.BatchNormalization(),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+        ])
+V5
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.BatchNormalization(),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V6
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.BatchNormalization(),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(256, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(128, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(64, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Dense(32, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V7
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.BatchNormalization(),
+            keras.layers.Dense(300, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Dense(300, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Dense(100, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Dense(30, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V8
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Lambda(lambda x: tf.expand_dims(x, -1)),
+            keras.layers.BatchNormalization(),
+            keras.layers.Dense(300, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Dense(500, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.4),
+            keras.layers.Dense(500, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.4),
+            keras.layers.Dense(300, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Dense(100, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Dropout(rate=0.2),
+            keras.layers.Dense(50, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.elu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V9
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Dense(500, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(300, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dense(100, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dense(50, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V10
+            keras.layers.Input(shape=self.feature_shape),
+            keras.layers.Dense(300, kernel_initializer="he_uniform"),
+            keras.layers.BatchNormalization(),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dropout(rate=0.5),
+            keras.layers.Dense(200, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dense(100, kernel_initializer="he_uniform"),
+            keras.layers.Dropout(rate=0.3),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dense(50, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Dense(30, kernel_initializer="he_uniform"),
+            keras.layers.Activation(activation=keras.activations.relu),
+            keras.layers.Flatten(),
+            keras.layers.Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+V11
+        input_1 = keras.layers.Input(shape=self.feature_shape, name="standard")
+        input_2 = keras.layers.Input(shape=(3, ), name="embeddings")
+
+        a = keras.layers.Dense(300, kernel_initializer="he_uniform")(input_1)
+        a = keras.layers.BatchNormalization()(a)
+        a = keras.layers.Activation(activation=keras.activations.relu)(a)
+        a = keras.layers.Dropout(rate=0.5)(a)
+        a = keras.layers.Dense(200, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.relu)(a)
+        a = keras.layers.Dense(100, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Dropout(rate=0.3)(a)
+        a = keras.layers.Activation(activation=keras.activations.relu)(a)
+        a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.relu)(a)
+        a = keras.layers.Dense(30, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.relu)(a)
+        a = keras.layers.Flatten()(a)
+
+        b = keras.layers.Dense(300, kernel_initializer="he_uniform")(input_2)
+        b = keras.layers.BatchNormalization()(b)
+        b = keras.layers.Activation(activation=keras.activations.relu)(b)
+        b = keras.layers.Dropout(rate=0.5)(b)
+        b = keras.layers.Dense(100, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.relu)(b)
+        b = keras.layers.Dropout(rate=0.3)(b)
+        b = keras.layers.Dense(30, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.relu)(b)
+        b = keras.layers.Flatten()(b)
+
+        out = keras.layers.Concatenate(axis=1)([a, b])
+        out = keras.layers.Dense(self.num_classes)(out)
+
+        return keras.Model(inputs=[input_1, input_2], outputs=out)
+V12
+        input_1 = keras.layers.Input(shape=self.feature_shape, name="standard")
+        input_2 = keras.layers.Input(shape=(3, ), name="embeddings")
+
+        a = keras.layers.Dense(500, kernel_initializer="he_uniform")(input_1)
+        a = keras.layers.BatchNormalization()(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(300, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(100, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Flatten()(a)
+
+        b = keras.layers.Dense(300, kernel_initializer="he_uniform")(input_2)
+        b = keras.layers.BatchNormalization()(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Dense(100, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Dense(30, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Flatten()(b)
+
+        out = keras.layers.Concatenate(axis=1)([a, b])
+        out = keras.layers.Dense(self.num_classes)(out)
+
+        return keras.Model(inputs=[input_1, input_2], outputs=out)
+V13
+        input_1 = keras.layers.Input(shape=self.feature_shape, name="standard")
+        input_2 = keras.layers.Input(shape=(3, ), name="embeddings")
+
+        a = keras.layers.Dense(500, kernel_initializer="he_uniform")(input_1)
+        a = keras.layers.BatchNormalization()(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(300, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(100, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Flatten()(a)
+
+        b = keras.layers.Dense(300, kernel_initializer="he_uniform")(input_2)
+        b = keras.layers.BatchNormalization()(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Dense(100, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Dense(50, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Flatten()(b)
+
+        out = keras.layers.Concatenate(axis=1)([a, b])
+        out = keras.layers.Dense(self.num_classes)(out)
+
+        return keras.Model(inputs=[input_1, input_2], outputs=out)
+V14
+        input_1 = keras.layers.Input(shape=self.feature_shape, name="standard")
+        input_2 = keras.layers.Input(shape=(3, ), name="embeddings")
+
+        a = keras.layers.Dense(300, kernel_initializer="he_uniform")(input_1)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(150, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
+        a = keras.layers.Activation(activation=keras.activations.elu)(a)
+        a = keras.layers.Flatten()(a)
+
+        b = keras.layers.Dense(300, kernel_initializer="he_uniform")(input_2)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Dense(150, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Dense(50, kernel_initializer="he_uniform")(b)
+        b = keras.layers.Activation(activation=keras.activations.elu)(b)
+        b = keras.layers.Flatten()(b)
+
+        out = keras.layers.Concatenate(axis=1)([a, b])
+        out = keras.layers.Dense(self.num_classes)(out)
+
+        return keras.Model(inputs=[input_1, input_2], outputs=out)
+
+Config info:
+classifier_14_512.h5:
+  - labels_map: {0: "Bacteroides thetaiotaomicron", 1: "Bacteroides uniformis", 2: "Barsniella intestihominis",
+     3: "Bifidobacterium adolescentis", 4: "Blank", 5: "Blautia hydrogenotrophica", 6: "Collinsella aerofaciens",
+     7: "Escherichia coli", 8: "Faecalibacterium prausnitzii", 9: "Parabacteroides merdae", 10: "Prevotella copri",
+     11: "Roseburia intestinalis", 12: "Ruminococcus bromii"}
+  - features_shape: (12,)
+  - labels_shape: (13,)

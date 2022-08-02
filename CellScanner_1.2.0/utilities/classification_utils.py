@@ -1,0 +1,227 @@
+import os
+from typing import Tuple
+
+import numpy as np
+import umap
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import callbacks
+
+from utilities.data_preparation import FilePreparation
+from utilities.visualizations import UmapVisualization
+from utilities.settings import Settings, ModelsInfo
+from utilities.data_preparation import DataPreparation
+
+
+def set_tf_hardware(hardware: str) -> None:
+    """
+    Sets the device to run TensorFlow computations. Either CPU or GPU.
+    Args:
+        hardware (str): String determining whether CPU or GPU will be used as the TensorFlow device.
+    Returns:
+        None
+    """
+    try:
+        tf.config.set_visible_devices([], hardware)
+    except:    # TODO: Add proper exception handling
+        raise Exception(hardware + "not available")
+
+
+class ClassificationModel:
+    """
+    ClassificationModel class is used to create TensorFlow model, compile it, and load weights once the model have been
+    trained.
+    """
+    def __init__(self, num_features: tuple, num_classes: tuple, fc_type: str, lr: float) -> None:
+        """
+        Args:
+            num_features (tuple): Tuple containing number of features in the dataset used to initialize input layer.
+            num_classes (tuple): Tuple containing number of classification files.
+        """
+        self.num_classes = num_classes[0]
+        self.feature_shape = num_features
+        self.fc_type = fc_type
+        self.lr = lr
+        self.model = self.__compile_model()
+
+    def __build_model(self) -> keras.Model:
+        """
+        Build_model function creates the model architecture and returns resulting Keras model.
+        Returns
+            keras.Model
+        """
+        input_1 = keras.layers.Input(shape=self.feature_shape, name="standard")
+        input_2 = keras.layers.Input(shape=(3,), name="embeddings")
+        if self.fc_type == "Accuri":
+            a = keras.layers.Dense(500, kernel_initializer="he_uniform")(input_1)
+            a = keras.layers.Activation(activation=keras.activations.elu)(a)
+            a = keras.layers.Dense(300, kernel_initializer="he_uniform")(a)
+            a = keras.layers.Activation(activation=keras.activations.elu)(a)
+            a = keras.layers.Dense(300, kernel_initializer="he_uniform")(a)
+            a = keras.layers.Activation(activation=keras.activations.elu)(a)
+            a = keras.layers.Dense(150, kernel_initializer="he_uniform")(a)
+            a = keras.layers.Activation(activation=keras.activations.elu)(a)
+            a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
+            a = keras.layers.Activation(activation=keras.activations.elu)(a)
+            a = keras.layers.Flatten()(a)
+            b = keras.layers.Dense(500, kernel_initializer="he_uniform")(input_2)
+            b = keras.layers.Activation(activation=keras.activations.elu)(b)
+            b = keras.layers.Dense(300, kernel_initializer="he_uniform")(b)
+            b = keras.layers.Activation(activation=keras.activations.elu)(b)
+            b = keras.layers.Dense(150, kernel_initializer="he_uniform")(b)
+            b = keras.layers.Activation(activation=keras.activations.elu)(b)
+            b = keras.layers.Dense(50, kernel_initializer="he_uniform")(b)
+            b = keras.layers.Activation(activation=keras.activations.elu)(b)
+            b = keras.layers.Flatten()(b)
+            out = keras.layers.Concatenate(axis=1)([a, b])
+            out = keras.layers.Dense(self.num_classes)(out)
+        # TODO: Add different architecture for the CytoFlew FC (if needed)
+        return keras.Model(inputs=[input_1, input_2], outputs=out)
+
+    def __compile_model(self) -> keras.Model:
+        """
+        Compiles model with the Adam optimizer and learning rate as specified in the settings configuration file.
+        Returns:
+            model (keras.Model): Compiled model with specified optimizer and learning rate.
+        """
+        model = self.__build_model()
+        opt = keras.optimizers.Adam(self.lr)
+        model.compile(optimizer=opt, loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                      metrics=["accuracy"])
+        return model
+
+    def get_model(self) -> keras.Model:
+        """
+        Returns
+            self.model (keras.Model): Returns compiled classifier.
+        """
+        return self.model
+
+    def get_loaded_model(self, weights: str) -> keras.Model:
+        """
+        Loads model, which is specified in the configuration file.
+        Args:
+            weights (str, optional): Relative or absolute path to the weights that will be loaded into the model.
+        Returns:
+            self.model (keras.Model): Returns classifier model.
+        """
+        if os.path.exists(weights):
+            self.model.load_weights(weights)
+            return self.model
+
+
+class ClassificationTraining:
+    """
+    ClassificationTraining class is used to run training on the provided files.
+    """
+    # TODO: Tensorboard for visualisations?
+    # TODO: Callbacks for learning rate scheduling?
+    def __init__(self, files: list, model_name: str, settings: Settings, models_info: ModelsInfo) -> None:
+        self.files = files
+        self.model_name = model_name + ".h5"
+        self.settings = settings
+        self.models_info = models_info
+        set_tf_hardware(self.settings.hardware)  # TODO: Consider calling this function at the start of the application
+        self.model, self.training_set, self.test_set = self.__prepare_training()
+
+    def __prepare_training(self) -> Tuple[keras.Model, tf.data.Dataset, tf.data.Dataset]:
+        """
+        Runs file preparation, resulting dataframe is used to create TensorFlow datasets, which are later used in
+        training.
+        Returns:
+            model (keras.Model), training_set (tf.data.Dataset), test_set (tf.data.Dataset): Tuple containing complied
+            model, TensorFlow datasets for training and testing.
+        """
+        file_prep = FilePreparation(files=self.files, settings=self.settings)
+        dataframe = file_prep.get_aggregated()
+        reducer = umap.UMAP(n_components=3, n_neighbors=25, min_dist=0.1, metric="euclidean",
+                            n_jobs=self.settings.num_umap_cores)
+        embeddings = reducer.fit_transform(dataframe)
+        labels = file_prep.get_labels()
+        labels_shape = file_prep.get_labels_shape()
+        data_preparation = DataPreparation(dataframe=dataframe, embeddings=embeddings, labels=labels,
+                                           batch_size=self.settings.num_batches)
+        labels_map = data_preparation.get_labels_map()
+        training_set, test_set = data_preparation.create_datasets()
+        features_shape = None
+        for elem in training_set.take(1):
+            features_shape = elem[0]["standard"][0].shape    # TODO: Consider changing this
+        model = ClassificationModel(num_classes=labels_shape, num_features=features_shape,
+                                    fc_type=self.settings.fc_type, lr=float(self.settings.lr))
+        model = model.get_model()
+        self.save_model_to_config(labels_map=labels_map, features_shape=tuple(features_shape),
+                                  labels_shape=labels_shape)
+        return model, training_set, test_set
+
+    def save_model_to_config(self, labels_map: dict, features_shape: tuple, labels_shape: tuple) -> None:
+        self.models_info.add_model(self.model_name, labels_map=labels_map, features_shape=features_shape,
+                                   labels_shape=labels_shape)
+        self.models_info.save_info()
+
+    def run_training(self) -> None:
+        """
+        Runs training on the prepared datasets.
+        Returns:
+            None
+        """
+        # TODO: Create callbacks for learning rate scheduling if necessary
+        path_to_model = "./classifiers/" + self.model_name
+        checkpoint_cb = callbacks.ModelCheckpoint(path_to_model, save_best_only=True)
+        self.model.fit(self.training_set, validation_data=self.test_set, epochs=self.settings.num_epochs,
+                       callbacks=[checkpoint_cb])
+
+
+class ClassificationResults:
+    """
+    ClassificationResults class is used to classify input files using previously trained model.
+    """
+    def __init__(self, files: list, num_features: tuple, num_classes: tuple, labels_map: dict, settings: Settings) \
+            -> None:
+        """
+        Args:
+            files (list): List of strings containing absolute paths to the desired files.
+            num_features (tuple): Tuple containing number of features in the dataset used to initialize input layer.
+            num_classes (tuple): Tuple containing number of classification files.
+            settings (Settings): Settings object containing settings for making predictions.
+        """
+        self.files = files
+        self.labels_map = labels_map
+        self.settings = settings
+        set_tf_hardware(settings.hardware)    # TODO: Consider calling this function at the start of the application
+        self.model = ClassificationModel(num_features=num_features, num_classes=num_classes,
+                                         fc_type=self.settings.fc_type, lr=self.settings.lr)
+        self.outputs = {}
+        self.__classification()
+
+    def __classification(self) -> None:
+        """
+        This functions fills in class attribute outputs, where key is the file and value is the nparray containing
+        embeddings from UMAP and corresponding predicted labels.
+        Returns:
+            None
+        """
+        file_preparation = FilePreparation(self.files, settings=self.settings)
+        # TODO: Change path to classifier from the config file
+        model_name = "./classifiers/" + self.settings.model
+        self.model = self.model.get_loaded_model(weights=model_name)
+        for file in self.files:
+            labels = []    # TODO: Change to numpy array
+            self.outputs[file] = file_preparation.get_data(file)
+            umap = UmapVisualization(self.outputs[file], num_cores=int(self.settings.num_umap_cores), dims=3)
+            embeddings = umap.get_embeddings()
+            prediction = self.model.predict((self.outputs[file], embeddings))
+            # labels = np.zeros(shape=prediction)
+            for _, pred in enumerate(prediction):
+                probabilities = tf.nn.softmax(pred)
+                labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
+            labels = np.asarray(list(map(lambda x: self.labels_map[x], labels)))   # TODO: Change to numpy map
+            self.outputs[file] = np.append(embeddings, labels[:, None], axis=1)
+
+    def get_outputs(self) -> dict:
+        """
+        Returns:
+            self.outputs (dict): Dictionary containing str:nd.array pair, where key is the location of the file and the
+            array contains data/UMAP embeddings and predicted labels.
+        """
+        # TODO: Write outputs to the folder specified in settings.results
+        return self.outputs

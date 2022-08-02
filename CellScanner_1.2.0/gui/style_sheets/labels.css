@@ -1,0 +1,24 @@
+QLabel {
+    font-family: Avenir, system-ui;
+    text-align: center;
+}
+
+QLabel#tittle {
+    font-size: 45px;
+}
+
+QLabel#version {
+    font-size: 18px;
+}
+
+QLabel#settings {
+    font-size: 24px;
+    text-align: left;
+}
+
+Qlabel#small {
+    /* TODO: Add slightly different text color */
+    font-size: 16px;
+    text-align: left;
+    background-color: yellow;
+}

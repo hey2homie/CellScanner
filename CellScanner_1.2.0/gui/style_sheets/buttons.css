@@ -1,0 +1,24 @@
+QPushButton {
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    background-color: #4e4d4d;
+    font-family: Avenir, system-ui;
+}
+
+QPushButton:hover{
+    background-color: #605f5f;
+}
+
+QPushButton#main {
+    font-size: 32px;
+}
+
+QPushButton#standard {
+    /* border-radius: 30px; */
+    font-size: 24px;
+}
+
+QPushButton#navigation {
+    font-size: 24px;
+}
