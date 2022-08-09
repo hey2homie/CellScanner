@@ -44,12 +44,12 @@ class Widget(QWidget):
         super(Widget, self).__init__(*args, **kwargs)
         self.setObjectName(obj_name)
         if geometry:
-            self.__set_geometry(geometry=geometry)
+            self.set_geometry(geometry=geometry)
         self.set_style(css=widget.value)
         if name:
             self.name = name
 
-    def __set_geometry(self, geometry: list, ) -> None:
+    def set_geometry(self, geometry: list, ) -> None:
         """
         Sets geometry of the widget.
         Args:
@@ -128,6 +128,18 @@ class Button(QPushButton, Widget):
             except AttributeError:
                 return get_top_level_parent(widget.parent())
 
+        def show_file_selection_window(stack: QStackedWidget) -> None:
+            """
+            Shows file selection window with diagnostics button instead of standard.
+            Args:
+                stack (QStackedWidget): stack of widgets.
+            """
+            stack.setCurrentIndex(1)
+            if self.text() == "Tool\nDiagnostics":
+                stack.widget(1).children()[3].setText("Diagnostics")
+            else:
+                stack.widget(1).children()[3].setText("Next")
+
         def clear(stack: QStackedWidget) -> None:
             """
             Clears the file input field, and switches window to the main window.
@@ -140,11 +152,12 @@ class Button(QPushButton, Widget):
                 stack.widget(4).children()[1].clear()
             stack.setCurrentIndex(0)
 
-        def show_results(stack: QStackedWidget) -> None:
+        def show_results(stack: QStackedWidget, diagnostics: bool = False) -> None:
             """
             Runs classification on provided files and displays results.
             Args:
                 stack (QStackedWidget): stack of widgets.
+                diagnostics (bool): if True, displays results of the diagnostics instead of classification.
             """
             if stack.widget(1).children()[0].count() != 0:
                 files = stack.widget(1).children()[0].get_files()
@@ -154,10 +167,18 @@ class Button(QPushButton, Widget):
                 labels_map = model_settings.get_labels_map()
                 features_shape = model_settings.get_features_shape()
                 labels_shape = model_settings.get_labels_shape()
-                classifier = ClassificationResults(files=files, num_features=features_shape, num_classes=labels_shape,
-                                                   labels_map=labels_map, settings=settings)
-                outputs = classifier.get_outputs()
-                stack.widget(2).set_items(files)
+                # There is super weird bug that elif below works with original button's text
+                if self.text() == "Diagnostics":
+                    classifier = ClassificationResults(files=files, num_features=features_shape,
+                                                       num_classes=labels_shape, labels_map=labels_map,
+                                                       settings=settings, diagnostics=True)
+                    outputs = classifier.run_diagnostics()
+                else:
+                    classifier = ClassificationResults(files=files, num_features=features_shape,
+                                                       num_classes=labels_shape, labels_map=labels_map,
+                                                       settings=settings)
+                    outputs = classifier.get_outputs()
+                    stack.widget(2).set_items(files)
                 stack.widget(2).set_inputs(outputs)
                 stack.setCurrentIndex(2)
             else:
@@ -171,8 +192,8 @@ class Button(QPushButton, Widget):
 
         windows = get_top_level_parent(self)
 
-        if self.text() == "Prediction" or self.text() == "Clustering":
-            self.clicked.connect(lambda: windows.setCurrentIndex(1))
+        if self.text() == "Prediction" or self.text() == "Tool\nDiagnostics":
+            self.clicked.connect(lambda: show_file_selection_window(windows))
         elif self.text() == "Settings":
             self.clicked.connect(lambda: windows.setCurrentIndex(3))
         elif self.text() == "Menu":

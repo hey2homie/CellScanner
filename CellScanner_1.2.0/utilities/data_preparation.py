@@ -84,9 +84,6 @@ class FilePreparation:
         Returns:
             None
         """
-        # TODO: Implement other type of gating (ask Clémence)
-        # Seems like she implemented only "line" type of gating. I should definitely ask about that.
-        # TODO: Ask Clémence about whether it has any effect or not (seems like it doesn't)
         if self.fc_type == "Accuri":
             for index, row in self.data.iterrows():
                 if (10 ** row["FL3-A"]) > (0.0241 * (10 ** row["FL3-A"]) ** 1.0996):
@@ -101,6 +98,7 @@ class FilePreparation:
                     self.data.drop(index)
                 elif row["FSC-A"] > (row["FSC-H"] + 0.6) or row["FSC-A"] > (row["FSC-H"] - 0.6):
                     self.data.drop(index)
+        # TODO: Do classifier to detect blanks and throw them away from dataset. Delete the thing above.
 
     def __aggregate(self) -> None:
         """
@@ -169,6 +167,8 @@ class FilePreparation:
             np.array: Returns vector containing strings with the label of data points. Corresponds to the return of the
                 get_dataframe() method.
         """
+        # TODO: Works good in diagnostics as long as there is a single file provided.
+        # Solution, instead of using just ndarray, you dict with file_name: ndarray of labels pair
         return np.array(self.labels)
 
     def get_labels_shape(self) -> tuple:

@@ -12,13 +12,13 @@ class ResultsWindow(QWidget):
     def __init__(self, stack: QStackedWidget, settings: Settings, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.stack = stack
-        self.widget_graph = None
-        self.layout_graph = None
         self.dims = settings.vis_dims
-        self.browser = QtWebEngineWidgets.QWebEngineView(parent=None)
-        self.file_box = None
         self.inputs = None
         self.data = None
+        self.widget_graph = None
+        self.layout_graph = None
+        self.browser = QtWebEngineWidgets.QWebEngineView(parent=None)
+        self.file_box = None
         self.__init_ui()
 
     def __init_ui(self) -> None:
@@ -41,11 +41,18 @@ class ResultsWindow(QWidget):
     def __init_graph(self) -> None:
         # TODO: Don't print to console init info
         if self.dims == "3D":
-            fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
+            try:
+                fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
+            except ValueError:
+                fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Correctness")
         else:
-            fig = px.scatter_3d(self.data, x="X", y="Y", color="Species")   # TODO: Change to 2D
+            try:
+                fig = px.scatter_3d(self.data, x="X", y="Y", color="Species")   # TODO: Change to 2D
+            except ValueError:
+                fig = px.scatter_3d(self.data, x="X", y="Y", color="Correctness")
         fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                                       font=dict(family="Avenir", size=8, color="black")))
+        # TODO: Add plot's tittle
         self.browser.setHtml(fig.to_html(include_plotlyjs="cdn"))
 
     def __configurate_widgets(self) -> None:
@@ -53,12 +60,16 @@ class ResultsWindow(QWidget):
         self.file_box.currentItemChanged.connect(lambda: self.set_inputs())
 
     def set_items(self, items: list) -> None:
-        # items = [item.split("/")[-1] for item in items]
+        # items = [item.split("/")[-1] for item in items]   # TODO: Remove the path to the files (if needed)
         self.file_box.addItems(items)
         self.file_box.setCurrentItem(self.file_box.item(0))
 
     def set_inputs(self, inputs: dict = None) -> None:
         if self.file_box.count() == 0:
+            self.file_box.hide()
+            self.children()[3].hide()
+            self.children()[4].hide()
+            self.widget_graph.set_geometry([46, 43, 808, 450])
             pass
         if inputs:
             self.inputs = inputs
@@ -69,5 +80,6 @@ class ResultsWindow(QWidget):
             self.data = self.inputs[value]
             self.data = pd.DataFrame({"X": self.data[:, 0].astype(np.float32), "Y": self.data[:, 1].astype(np.float32),
                                       "Z": self.data[:, 2].astype(np.float32), "Species": self.data[:, 3]})
-            # TODO: Change monstrosity above
+            if "Correct" or "Incorrect" in self.data["Species"].unique():
+                self.data.rename(columns={"Species": "Correctness"}, inplace=True)
             self.__init_graph()

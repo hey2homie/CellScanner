@@ -6,9 +6,10 @@ import umap
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import callbacks
+from sklearn.preprocessing import label_binarize
 
 from utilities.data_preparation import FilePreparation
-from utilities.visualizations import UmapVisualization
+from utilities.visualizations import UmapVisualization, MplVisualization
 from utilities.settings import Settings, ModelsInfo
 from utilities.data_preparation import DataPreparation
 
@@ -23,7 +24,7 @@ def set_tf_hardware(hardware: str) -> None:
     """
     try:
         tf.config.set_visible_devices([], hardware)
-    except:    # TODO: Add proper exception handling
+    except:  # TODO: Add proper exception handling
         raise Exception(hardware + "not available")
 
 
@@ -32,6 +33,7 @@ class ClassificationModel:
     ClassificationModel class is used to create TensorFlow model, compile it, and load weights once the model have been
     trained.
     """
+
     def __init__(self, num_features: tuple, num_classes: tuple, fc_type: str, lr: float) -> None:
         """
         Args:
@@ -114,6 +116,7 @@ class ClassificationTraining:
     """
     ClassificationTraining class is used to run training on the provided files.
     """
+
     # TODO: Tensorboard for visualisations?
     # TODO: Callbacks for learning rate scheduling?
     def __init__(self, files: list, model_name: str, settings: Settings, models_info: ModelsInfo) -> None:
@@ -145,7 +148,7 @@ class ClassificationTraining:
         training_set, test_set = data_preparation.create_datasets()
         features_shape = None
         for elem in training_set.take(1):
-            features_shape = elem[0]["standard"][0].shape    # TODO: Consider changing this
+            features_shape = elem[0]["standard"][0].shape  # TODO: Consider changing this
         model = ClassificationModel(num_classes=labels_shape, num_features=features_shape,
                                     fc_type=self.settings.fc_type, lr=float(self.settings.lr))
         model = model.get_model()
@@ -175,8 +178,9 @@ class ClassificationResults:
     """
     ClassificationResults class is used to classify input files using previously trained model.
     """
-    def __init__(self, files: list, num_features: tuple, num_classes: tuple, labels_map: dict, settings: Settings) \
-            -> None:
+
+    def __init__(self, files: list, num_features: tuple, num_classes: tuple, labels_map: dict, settings: Settings,
+                 diagnostics: bool = False) -> None:
         """
         Args:
             files (list): List of strings containing absolute paths to the desired files.
@@ -187,9 +191,11 @@ class ClassificationResults:
         self.files = files
         self.labels_map = labels_map
         self.settings = settings
-        set_tf_hardware(settings.hardware)    # TODO: Consider calling this function at the start of the application
+        self.diagnostics = diagnostics
+        set_tf_hardware(settings.hardware)  # TODO: Consider calling this function at the start of the application
         self.model = ClassificationModel(num_features=num_features, num_classes=num_classes,
                                          fc_type=self.settings.fc_type, lr=self.settings.lr)
+        self.true_labels = {}
         self.outputs = {}
         self.__classification()
 
@@ -204,18 +210,27 @@ class ClassificationResults:
         # TODO: Change path to classifier from the config file
         model_name = "./classifiers/" + self.settings.model
         self.model = self.model.get_loaded_model(weights=model_name)
-        for file in self.files:
-            labels = []    # TODO: Change to numpy array
+        if self.diagnostics:
+            self.outputs["all"] = file_preparation.get_aggregated()
+            self.true_labels["all"] = file_preparation.get_labels()
+            self.__run_prediction(file="all", file_preparation=file_preparation)
+        else:
+            for file in self.files:
+                self.__run_prediction(file=file, file_preparation=file_preparation)
+
+    def __run_prediction(self, file, file_preparation: FilePreparation) -> None:
+        labels = []  # TODO: Change to numpy array
+        if not self.diagnostics:
             self.outputs[file] = file_preparation.get_data(file)
-            umap = UmapVisualization(self.outputs[file], num_cores=int(self.settings.num_umap_cores), dims=3)
-            embeddings = umap.get_embeddings()
-            prediction = self.model.predict((self.outputs[file], embeddings))
-            # labels = np.zeros(shape=prediction)
-            for _, pred in enumerate(prediction):
-                probabilities = tf.nn.softmax(pred)
-                labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
-            labels = np.asarray(list(map(lambda x: self.labels_map[x], labels)))   # TODO: Change to numpy map
-            self.outputs[file] = np.append(embeddings, labels[:, None], axis=1)
+        umap = UmapVisualization(self.outputs[file], num_cores=int(self.settings.num_umap_cores), dims=3)
+        embeddings = umap.get_embeddings()
+        prediction = self.model.predict((self.outputs[file], embeddings))
+        # labels = np.zeros(shape=prediction)
+        for _, pred in enumerate(prediction):
+            probabilities = tf.nn.softmax(pred)
+            labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
+        labels = np.asarray(list(map(lambda x: self.labels_map[x], labels)))  # TODO: Change to numpy map
+        self.outputs[file] = np.append(embeddings, labels[:, None], axis=1)
 
     def get_outputs(self) -> dict:
         """
@@ -225,3 +240,46 @@ class ClassificationResults:
         """
         # TODO: Write outputs to the folder specified in settings.results
         return self.outputs
+
+    def run_diagnostics(self) -> dict:
+        """
+        Runs diagnostics on the trained model.
+        Returns:
+            outputs (dict):
+        """
+        diagnostics_results = ToolDiagnosticsCalculations(true_labels=self.true_labels, predicted_labels=self.outputs,
+                                                          output_path=self.settings.results)
+        labels_compared = diagnostics_results.get_misclassified_points()
+        outputs = self.get_outputs()
+        outputs["all"][:, -1] = labels_compared
+        return outputs
+
+
+class ToolDiagnosticsCalculations:
+
+    def __init__(self, true_labels: dict, predicted_labels: dict, output_path: str) -> None:
+        """
+        Args:
+            true_labels (dict): Dictionary containing str:np.ndarray pair, where key is file and the value is the numpy
+            array containing true labels.
+            predicted_labels (dict): Dictionary containing str:np.ndarray pair, where key is file and the value is the
+            numpy array containing predicted labels.
+        Returns:
+            None
+        """
+        self.true_labels = true_labels["all"]
+        self.predicted_labels = predicted_labels["all"][:, -1]
+        self.output_path = output_path
+        self.__calculate_diagnostics()
+
+    def __calculate_diagnostics(self) -> None:
+        true_labels = label_binarize(self.true_labels, classes=np.unique(self.true_labels))
+        predicted_labels = label_binarize(self.predicted_labels, classes=np.unique(self.predicted_labels))
+        vis = MplVisualization(output_path=self.output_path)
+        vis.diagnostics(true_labels=true_labels, predicted_labels=predicted_labels)
+
+    def get_misclassified_points(self) -> list:
+        labels = []  # TODO: Change to numpy array
+        for i in range(0, len(self.true_labels)):
+            labels.append("Correct") if self.true_labels[i] == self.predicted_labels[i] else labels.append("Incorrect")
+        return labels
