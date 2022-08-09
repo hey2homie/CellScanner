@@ -2,7 +2,8 @@ fc_type: Accuri
 gating_type: Line
 hardware: GPU
 lr: 1e-5
-lr_scheduler: None
+lr_reduced: 1e-2
+lr_scheduler: Constant
 model: classifier_14_512.h5
 num_batches: 256
 num_classes: 11

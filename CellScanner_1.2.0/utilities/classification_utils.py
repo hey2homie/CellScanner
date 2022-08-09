@@ -169,10 +169,28 @@ class ClassificationTraining:
         """
         # TODO: Create callbacks for learning rate scheduling if necessary
         path_to_model = "./classifiers/" + self.model_name
-        checkpoint_cb = callbacks.ModelCheckpoint(path_to_model, save_best_only=True)
+        callbacks_to_use = [callbacks.ModelCheckpoint(path_to_model, save_best_only=True)]
+        if self.settings.lr_scheduler == "Time Based Decay":
+            callbacks_to_use.append(callbacks.LearningRateScheduler(self.__time_based_decay))
+        elif self.settings.lr_scheduler == "Step Decay":
+            callbacks_to_use.append(callbacks.LearningRateScheduler(self.__step_decay))
+        elif self.settings.lr_scheduler == "Exponential Decay":
+            callbacks_to_use.append(callbacks.LearningRateScheduler(self.__exp_decay))
         self.model.fit(self.training_set, validation_data=self.test_set, epochs=self.settings.num_epochs,
-                       callbacks=[checkpoint_cb])
+                       callbacks=callbacks_to_use)
 
+    def __time_based_decay(self, epoch: int, lr: float) -> float:
+        decay = self.settings.lr * self.settings.num_epochs
+        return lr * 1 / (1 + decay * epoch)
+
+    def __step_decay(self, epoch: int, lr: float) -> float:
+        drop_rate = 0.5
+        epochs_drop = 10.0
+        return self.settings.lr * np.pow(drop_rate, np.floor(epoch / epochs_drop))
+
+    def __exp_decay(self, epoch: int, lr: float) -> float:
+        k = 0.1
+        return self.settings.lr * np.exp(-k * epoch)
 
 class ClassificationResults:
     """

@@ -23,6 +23,7 @@ class Settings:
     hardware = None
     lr = None
     lr_scheduler = None
+    lr_reduced = None
     num_batches = None
     num_epochs = None
     gating_type = None

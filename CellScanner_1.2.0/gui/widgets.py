@@ -152,12 +152,11 @@ class Button(QPushButton, Widget):
                 stack.widget(4).children()[1].clear()
             stack.setCurrentIndex(0)
 
-        def show_results(stack: QStackedWidget, diagnostics: bool = False) -> None:
+        def show_results(stack: QStackedWidget) -> None:
             """
             Runs classification on provided files and displays results.
             Args:
                 stack (QStackedWidget): stack of widgets.
-                diagnostics (bool): if True, displays results of the diagnostics instead of classification.
             """
             if stack.widget(1).children()[0].count() != 0:
                 files = stack.widget(1).children()[0].get_files()

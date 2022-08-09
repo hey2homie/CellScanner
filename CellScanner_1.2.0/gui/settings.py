@@ -18,7 +18,8 @@ class ComboBoxContent(Enum):
     Channels = iter(["Blabl", "Bla-1", "Bla-2F"])  # TODO: Update later
     Hardware = iter(["GPU", "CPU"])
     Lr = iter(["1e-6", "1e-5", "1e-4", "1e-3", "1e-2"])
-    LrScheduler = iter(["None", "Constant", "Step", "Exponential"])
+    Lr_reduced = iter(["1e-3", "1e-2"])
+    LrScheduler = iter(["Constant", "Time Decay", "Step Decay", "Exponential Decay"])
     Gating = iter(["Line", "Machine"])
     # TODO: Change calling iter everytime to some getter that will apply iter() everytime attribute is called
 
@@ -35,6 +36,8 @@ class SettingsWindow(QWidget):
     num_batches = None
     num_epochs = None
     lr = None
+    lr_scheduler = None
+    lr_reduced = None
     gating_type = None
 
     def __init__(self, stack: QStackedWidget, settings: Settings, *args, **kwargs) -> None:
@@ -100,6 +103,15 @@ class SettingsWindow(QWidget):
 
     def __init_elements(self) -> None:
         from widgets import Button, Label, HLine, ComboBox, EditLine
+
+        def index_changed(widget: ComboBox):
+            if widget.currentIndex() != 0:
+                self.widget_nn.children()[11].show()
+                self.widget_nn.children()[12].show()
+            else:
+                self.widget_nn.children()[11].hide()
+                self.widget_nn.children()[12].hide()
+
         tittle_label = Label(text="Settings", obj_name="tittle", geometry=[0, 9, 895, 69], parent=self)
         general_label = Label(text="General", obj_name="settings", geometry=[0, 0, 98, 41],
                               parent=self.widget_general)
@@ -162,6 +174,14 @@ class SettingsWindow(QWidget):
         epochs_label = Label(text="Number of epochs:", obj_name="small", geometry=[238, 70, 147, 26],
                              parent=self.widget_nn)
         epochs_input = EditLine(obj_name="input", geometry=[360, 70, 50, 26], name="num_epochs", parent=self.widget_nn)
+        lr_initial_label = Label(text="Initial learning rate:", obj_name="small", geometry=[444, 70, 128, 26],
+                                 parent=self.widget_nn)
+        lr_initial_choose = ComboBox(obj_name="combobox", geometry=[566, 70, 85, 26], name="lr_reduced",
+                                     parent=self.widget_nn)
+        lr_initial_choose.addItems(ComboBoxContent.Lr_reduced.value)
+        if lr_scheduler_choose.currentIndex() == 0:
+            lr_initial_label.hide()
+            lr_initial_choose.hide()
         HLine(obj_name="line", geometry=[180, 16, 705, 1], parent=self.widget_nn)
         data_label = Label(text="Data Preparation", obj_name="settings", geometry=[0, 0, 192, 41],
                            parent=self.widget_data)
@@ -171,6 +191,7 @@ class SettingsWindow(QWidget):
         gating_choose.addItems(ComboBoxContent.Gating.value)
         HLine(obj_name="line", geometry=[194, 16, 705, 1], parent=self.widget_data)
         # TODO: Make global alignment through iteration over children at the class initiation
+        lr_scheduler_choose.currentIndexChanged.connect(lambda: index_changed(lr_scheduler_choose))
         tittle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         [label.setAlignment(Qt.AlignmentFlag.AlignLeft) for label in [general_label, vis_label, nn_label, data_label]]
 
@@ -184,7 +205,7 @@ class SettingsWindow(QWidget):
         """
         for widget in [self.widget_general, self.widget_vis, self.widget_nn, self.widget_data]:
             for child in widget.children():
-                if isinstance(child, ComboBox):
+                if isinstance(child, ComboBox) and child.name != "lr_initial":
                     items = [child.itemText(i) for i in range(child.count())]
                     child.setCurrentIndex(items.index(self.attributes[child.name]))
                 elif isinstance(child, EditLine):
