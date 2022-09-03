@@ -2,9 +2,9 @@ from enum import Enum
 from typing import Any
 
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
-    QFrame, QComboBox, QLineEdit
+    QFrame, QComboBox, QLineEdit, QStyleOptionComboBox, QStyle
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPainter
+from PyQt6.QtGui import QPainter, QPalette
 
 from utilities.classification_utils import ClassificationResults
 from utilities.settings import ModelsInfo
@@ -36,8 +36,9 @@ class Widget(QWidget):
         Args:
             widget (Styles): one of the Styles attributes.
             obj_name (str): string used by the stylesheet to apply particular settings to the given widget.
-            geometry (list): list of 4 ints specifying x and y position relative to the parent widget, and widget height
-            and width..
+            geometry (list, optional): list of 4 ints specifying x and y position relative to the parent widget, widget
+            height and width.
+            name (str, optional): name of the widget.
             *args: additional argument that is inherited from the parent class.
             **kwargs: additional arguments that are inherited from the parent class.
         """
@@ -68,7 +69,8 @@ class Widget(QWidget):
             style = file.read()
             self.setStyleSheet(style)
 
-    # TODO: Add getter for stack
+    def set_name(self, name: str) -> None:
+        self.name = name
 
 
 class Label(QLabel, Widget):
@@ -77,6 +79,11 @@ class Label(QLabel, Widget):
     """
 
     def __init__(self, *args, **kwargs) -> None:
+        """
+        Args:
+            *args:
+            **kwargs:
+        """
         super(Label, self).__init__(widget=Styles.Label, *args, **kwargs)
 
 
@@ -87,6 +94,11 @@ class HLine(QFrame, Widget):
     """
 
     def __init__(self, *args, **kwargs) -> None:
+        """
+        Args:
+            *args:
+            **kwargs:
+        """
         super(HLine, self).__init__(widget=Styles.Line, *args, **kwargs)
         self.setFrameShape(QFrame.Shape.HLine)
         self.setFrameShadow(QFrame.Shadow.Sunken)
@@ -98,6 +110,11 @@ class EditLine(QLineEdit, Widget):
     """
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            *args:
+            **kwargs:
+        """
         super(EditLine, self).__init__(widget=Styles.EditLine, *args, **kwargs)
 
 
@@ -108,6 +125,11 @@ class Button(QPushButton, Widget):
     """
 
     def __init__(self, *args, **kwargs) -> None:
+        """
+        Args:
+            *args:
+            **kwargs:
+        """
         super(Button, self).__init__(widget=Styles.Button, *args, **kwargs)
         self.__add_action()
 
@@ -119,9 +141,9 @@ class Button(QPushButton, Widget):
             """
             Returns first parent of widget which has QStackedWidget as class attribute.
             Args:
-                widget: Child widget whose top level parent is to be returned.
+                widget (QWidget): Child widget whose top level parent is to be returned.
             Returns:
-                widget (QStackedWidget): parent widget containing QStackedWidget.
+                widget (QStackedWidget): Parent widget containing QStackedWidget.
             """
             try:
                 return widget.stack
@@ -132,7 +154,7 @@ class Button(QPushButton, Widget):
             """
             Shows file selection window with diagnostics button instead of standard.
             Args:
-                stack (QStackedWidget): stack of widgets.
+                stack (QStackedWidget): Stack of widgets.
             """
             stack.setCurrentIndex(1)
             if self.text() == "Tool\nDiagnostics":
@@ -144,7 +166,7 @@ class Button(QPushButton, Widget):
             """
             Clears the file input field, and switches window to the main window.
             Args:
-                stack (QStackedWidget): stack of widgets.
+                stack (QStackedWidget): Stack of widgets.
             """
             if stack.currentIndex() != 3:
                 stack.widget(1).children()[0].clear()
@@ -154,7 +176,7 @@ class Button(QPushButton, Widget):
 
         def show_results(stack: QStackedWidget) -> None:
             """
-            Runs classification on provided files and displays results.
+            Runs classification or diagnostics on provided files and displays results.
             Args:
                 stack (QStackedWidget): stack of widgets.
             """
@@ -184,10 +206,26 @@ class Button(QPushButton, Widget):
                 QMessageBox.about(self, "Warning", "Files are not selected")
 
         def set_output_directory(stack: QStackedWidget) -> None:
+            """
+            Args:
+                stack (QStackedWidget): Stack of widgets.
+            Returns:
+                None
+            """
             directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
-            stack.widget(3).children()[0].children()[0].children()[6].setText(directory)    # Meh, ugly.
+            if directory:
+                stack.widget(3).children()[0].children()[0].children()[6].setText(directory)    # Meh, ugly.
             settings = stack.widget(3)
             settings.results = directory
+
+        def save_visuals(stack: QStackedWidget) -> None:
+            """
+            Args:
+                stack (QStackedWidget): Stack of widgets.
+            Returns:
+                None
+            """
+            stack.currentWidget().save_visuals()
 
         windows = get_top_level_parent(self)
 
@@ -210,6 +248,8 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: windows.widget(4).begin_training())
         elif self.text() == "...":
             self.clicked.connect(lambda: set_output_directory(windows))
+        elif self.text() == "Save Visuals":
+            self.clicked.connect(lambda: save_visuals(windows))
 
 
 class ComboBox(QComboBox, Widget):
@@ -219,6 +259,38 @@ class ComboBox(QComboBox, Widget):
 
     def __init__(self, *args, **kwargs):
         super(QComboBox, self).__init__(widget=Styles.ComboBox, *args, **kwargs)
+
+
+class CheckableComboBox(QComboBox, Widget):     # From StackOverflow
+    # TODO: Add painting with number of chose items in the box
+    def __init__(self, *args, **kwargs) -> None:
+        super(QComboBox, self).__init__(widget=Styles.ComboBox, *args, **kwargs)
+        self.view().pressed.connect(self.__handle_item_pressed)
+
+    def __handle_item_pressed(self, index) -> None:
+        item = self.model().itemFromIndex(index)
+        if item.checkState() == Qt.CheckState.Checked:
+            item.setCheckState(Qt.CheckState.Unchecked)
+        else:
+            item.setCheckState(Qt.CheckState.Checked)
+
+    def __item_checked(self, index) -> bool:
+        item = self.model().item(index, 0)
+        return item.checkState() == Qt.CheckState.Checked
+    # TODO: Add method to remove checked state for all items
+
+    def set_checked_items(self, items: list) -> None:
+        all_items = [self.itemText(i) for i in range(self.count())]
+        for item in all_items:
+            if item in items:
+                self.model().item(all_items.index(item)).setCheckState(Qt.CheckState.Checked)
+
+    def get_check_items(self) -> list:
+        checked_items = []
+        for i in range(self.count()):
+            if self.__item_checked(i):
+                checked_items.append(self.model().item(i, 0).text())
+        return checked_items
 
 
 class FileBox(QListWidget, Widget):

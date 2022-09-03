@@ -116,10 +116,15 @@ class ClassificationTraining:
     """
     ClassificationTraining class is used to run training on the provided files.
     """
-
     # TODO: Tensorboard for visualisations?
-    # TODO: Callbacks for learning rate scheduling?
     def __init__(self, files: list, model_name: str, settings: Settings, models_info: ModelsInfo) -> None:
+        """
+        Args:
+            files (list): List containing paths to the files that will be used for training.
+            model_name (str): Name of the model that will be saved.
+            settings (Settings): Settings object containing training parameters.
+            models_info (ModelsInfo): ModelsInfo object containing models information.
+        """
         self.files = files
         self.model_name = model_name + ".h5"
         self.settings = settings
@@ -157,6 +162,15 @@ class ClassificationTraining:
         return model, training_set, test_set
 
     def save_model_to_config(self, labels_map: dict, features_shape: tuple, labels_shape: tuple) -> None:
+        """
+        Saves model information to the dedicated configuration file.
+        Args:
+            labels_map (dict): Dictionary containing labels and their corresponding indices.
+            features_shape (tuple): Shape of the features.
+            labels_shape (tuple): Shape of the labels.
+        Returns:
+            None
+        """
         self.models_info.add_model(self.model_name, labels_map=labels_map, features_shape=features_shape,
                                    labels_shape=labels_shape)
         self.models_info.save_info()
@@ -180,23 +194,44 @@ class ClassificationTraining:
                        callbacks=callbacks_to_use)
 
     def __time_based_decay(self, epoch: int, lr: float) -> float:
+        """
+        Args:
+            epoch (int): Current epoch
+            lr (float): Current learning rate
+        Returns:
+            decay_rate (float): New learning rate
+        """
         decay = self.settings.lr * self.settings.num_epochs
         return lr * 1 / (1 + decay * epoch)
 
     def __step_decay(self, epoch: int, lr: float) -> float:
+        """
+        Args:
+            epoch (int): Current epoch
+            lr (float): Current learning rate
+        Returns:
+            decay_rate (float): New learning rate
+        """
         drop_rate = 0.5
         epochs_drop = 10.0
         return self.settings.lr * np.pow(drop_rate, np.floor(epoch / epochs_drop))
 
     def __exp_decay(self, epoch: int, lr: float) -> float:
+        """
+        Args:
+            epoch (int): Current epoch
+            lr (float): Current learning rate
+        Returns:
+            decay_rate (float): New learning rate
+        """
         k = 0.1
         return self.settings.lr * np.exp(-k * epoch)
+
 
 class ClassificationResults:
     """
     ClassificationResults class is used to classify input files using previously trained model.
     """
-
     def __init__(self, files: list, num_features: tuple, num_classes: tuple, labels_map: dict, settings: Settings,
                  diagnostics: bool = False) -> None:
         """
@@ -204,7 +239,9 @@ class ClassificationResults:
             files (list): List of strings containing absolute paths to the desired files.
             num_features (tuple): Tuple containing number of features in the dataset used to initialize input layer.
             num_classes (tuple): Tuple containing number of classification files.
+            labels_map (dict): Dictionary containing mapping between labels and their indices.
             settings (Settings): Settings object containing settings for making predictions.
+            diagnostics (bool, optional): If True, diagnostics is run instead of prediction. Defaults to False.
         """
         self.files = files
         self.labels_map = labels_map
@@ -225,7 +262,6 @@ class ClassificationResults:
             None
         """
         file_preparation = FilePreparation(self.files, settings=self.settings)
-        # TODO: Change path to classifier from the config file
         model_name = "./classifiers/" + self.settings.model
         self.model = self.model.get_loaded_model(weights=model_name)
         if self.diagnostics:
@@ -236,7 +272,14 @@ class ClassificationResults:
             for file in self.files:
                 self.__run_prediction(file=file, file_preparation=file_preparation)
 
-    def __run_prediction(self, file, file_preparation: FilePreparation) -> None:
+    def __run_prediction(self, file: str, file_preparation: FilePreparation) -> None:
+        """
+        Args:
+            file (str): String containing absolute path to the file to be classified.
+            file_preparation (FilePreparation): FilePreparation object used to prepare file for classification.
+        Returns:
+            None
+        """
         labels = []  # TODO: Change to numpy array
         if not self.diagnostics:
             self.outputs[file] = file_preparation.get_data(file)
@@ -248,7 +291,8 @@ class ClassificationResults:
             probabilities = tf.nn.softmax(pred)
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
         labels = np.asarray(list(map(lambda x: self.labels_map[x], labels)))  # TODO: Change to numpy map
-        self.outputs[file] = np.append(embeddings, labels[:, None], axis=1)
+        embeddings = np.append(embeddings, labels[:, None], axis=1)
+        self.outputs[file] = np.append(self.outputs[file], embeddings, axis=1)
 
     def get_outputs(self) -> dict:
         """
@@ -291,12 +335,21 @@ class ToolDiagnosticsCalculations:
         self.__calculate_diagnostics()
 
     def __calculate_diagnostics(self) -> None:
+        """
+
+        Returns:
+            None
+        """
         true_labels = label_binarize(self.true_labels, classes=np.unique(self.true_labels))
         predicted_labels = label_binarize(self.predicted_labels, classes=np.unique(self.predicted_labels))
         vis = MplVisualization(output_path=self.output_path)
         vis.diagnostics(true_labels=true_labels, predicted_labels=predicted_labels)
 
     def get_misclassified_points(self) -> list:
+        """
+        Returns:
+            labels (list): List of strings containing correctly/incorrectly classified points.
+        """
         labels = []  # TODO: Change to numpy array
         for i in range(0, len(self.true_labels)):
             labels.append("Correct") if self.true_labels[i] == self.predicted_labels[i] else labels.append("Incorrect")

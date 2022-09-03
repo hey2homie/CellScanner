@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from utilities.settings import Settings
+from utilities.visualizations import MplVisualization
 
 
 class ResultsWindow(QWidget):
@@ -12,7 +13,7 @@ class ResultsWindow(QWidget):
     def __init__(self, stack: QStackedWidget, settings: Settings, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.stack = stack
-        self.dims = settings.vis_dims
+        self.settings = settings
         self.inputs = None
         self.data = None
         self.widget_graph = None
@@ -39,8 +40,7 @@ class ResultsWindow(QWidget):
         Button(text="Save Visuals", obj_name="standard", geometry=[652, 518, 200, 60], parent=self)
 
     def __init_graph(self) -> None:
-        # TODO: Don't print to console init info
-        if self.dims == "3D":
+        if self.settings.vis_dims == "3D":
             try:
                 fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
             except ValueError:
@@ -78,8 +78,14 @@ class ResultsWindow(QWidget):
             value = self.file_box.currentItem().text()
         if self.inputs:
             self.data = self.inputs[value]
-            self.data = pd.DataFrame({"X": self.data[:, 0].astype(np.float32), "Y": self.data[:, 1].astype(np.float32),
-                                      "Z": self.data[:, 2].astype(np.float32), "Species": self.data[:, 3]})
-            if "Correct" or "Incorrect" in self.data["Species"].unique():
+            self.data = pd.DataFrame({"X": self.data[:, -4].astype(np.float32),
+                                      "Y": self.data[:, -3].astype(np.float32),
+                                      "Z": self.data[:, -2].astype(np.float32),
+                                      "Species": self.data[:, -1]})
+            if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
                 self.data.rename(columns={"Species": "Correctness"}, inplace=True)
             self.__init_graph()
+
+    def save_visuals(self) -> None:
+        visualizations = MplVisualization(output_path=self.settings.results)
+        visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)

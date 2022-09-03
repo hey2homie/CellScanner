@@ -15,18 +15,16 @@ class FilePreparation:
     initializing class and later calling get_aggregated() method or processed individually with the get_data() method.
     """
 
-    def __init__(self, files: list, settings: Settings, col_to_drop: list = None) -> None:
+    def __init__(self, files: list, settings: Settings) -> None:
         """
         Args:
-            files (list, optional): List of strings containing absolute path to the desired files.
-            col_to_drop (list, optional): Optional list of strings containing file columns that will be excluded.
-                Default columns are "Width" and "Time".
+            files (list): List of strings containing absolute path to the desired files.
+            settings (Settings): Settings object.
         """
-        # TODO: Columns to drop from config when implemented
         self.files_list = files
         self.fc_type = settings.fc_type
         self.gating_type = settings.gating_type
-        self.col_names = col_to_drop    # TODO: Implement in Settings
+        self.cols_drop = settings.cols_to_drop_accuri if self.fc_type == "Accuri" else settings.cols_to_drop_cytoflex
         self.data = None
         self.aggregated = None
         self.labels = []
@@ -46,7 +44,7 @@ class FilePreparation:
         """
         Converts given file into pandas dataframe.
         Args:
-            file (str): path to the file.
+            file (str): Path to the file.
         """
         meta, self.data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
 
@@ -57,10 +55,8 @@ class FilePreparation:
         Returns:
             None
         """
-        if self.col_names is None:
-            self.col_names = ["Time", "Width"]  # TODO: Remove Width (its only used for classifier_14_512.h5)
         try:
-            self.data.drop(self.col_names, axis=1, inplace=True)
+            self.data.drop(self.cols_drop, axis=1, inplace=True)
         except KeyError:
             pass    # TODO: Em, raise issue?
 
@@ -84,21 +80,24 @@ class FilePreparation:
         Returns:
             None
         """
-        if self.fc_type == "Accuri":
-            for index, row in self.data.iterrows():
-                if (10 ** row["FL3-A"]) > (0.0241 * (10 ** row["FL3-A"]) ** 1.0996):
-                    self.data.drop(index)
-                elif row["FSC-A"] > 5.0 and row["SSC-A"] > 4.0:     # Values are after log10 transformation
-                    self.data.drop(index)
-                elif row["FSC-A"] > (row["FSC-H"] + 0.5) or row["FSC-A"] < (row["FSC-H"] - 0.5):
-                    self.data.drop(index)
-        elif self.fc_type == "CytoFlex":
-            for index, row in self.data.iterrows():
-                if row["FL3-A"] > (1.5 * row["'FL1-A'"] - 2.8) or row["FL2-A"] > (2.5 * row["FL1-A"] - 9):
-                    self.data.drop(index)
-                elif row["FSC-A"] > (row["FSC-H"] + 0.6) or row["FSC-A"] > (row["FSC-H"] - 0.6):
-                    self.data.drop(index)
-        # TODO: Do classifier to detect blanks and throw them away from dataset. Delete the thing above.
+        if self.gating_type == "Line":
+            if self.fc_type == "Accuri":
+                for index, row in self.data.iterrows():
+                    if (10 ** row["FL3-A"]) > (0.0241 * (10 ** row["FL3-A"]) ** 1.0996):
+                        self.data.drop(index)
+                    elif row["FSC-A"] > 5.0 and row["SSC-A"] > 4.0:     # Values are after log10 transformation
+                        self.data.drop(index)
+                    elif row["FSC-A"] > (row["FSC-H"] + 0.5) or row["FSC-A"] < (row["FSC-H"] - 0.5):
+                        self.data.drop(index)
+            elif self.fc_type == "CytoFlex":
+                for index, row in self.data.iterrows():
+                    if row["FL3-A"] > (1.5 * row["'FL1-A'"] - 2.8) or row["FL2-A"] > (2.5 * row["FL1-A"] - 9):
+                        self.data.drop(index)
+                    elif row["FSC-A"] > (row["FSC-H"] + 0.6) or row["FSC-A"] > (row["FSC-H"] - 0.6):
+                        self.data.drop(index)
+        else:
+            pass
+            # TODO: Do classifier to detect blanks and throw them away from dataset. Delete the thing above.
 
     def __aggregate(self) -> None:
         """
@@ -116,7 +115,7 @@ class FilePreparation:
         Extracts labels from the file name (assuming they are named correctly) and adds to the labels array, which is
         used during training for creating label maps.
         Args:
-            file (str): path to the file.
+            file (str): Path to the file.
         Returns:
             None
         """
@@ -132,7 +131,7 @@ class FilePreparation:
         """
         Runs transformation pipeline on the individual file.
         Args:
-            file (str): path to the file.
+            file (str): Path to the file.
         Returns:
             None
         """
@@ -167,8 +166,6 @@ class FilePreparation:
             np.array: Returns vector containing strings with the label of data points. Corresponds to the return of the
                 get_dataframe() method.
         """
-        # TODO: Works good in diagnostics as long as there is a single file provided.
-        # Solution, instead of using just ndarray, you dict with file_name: ndarray of labels pair
         return np.array(self.labels)
 
     def get_labels_shape(self) -> tuple:
@@ -184,6 +181,7 @@ class DataPreparation:
     DataPreparation class is used to create training, validation and test sets for the model training in the TensorFlow
     Dataset format.
     """
+
     def __init__(self, dataframe: np.ndarray, embeddings: np.ndarray, labels: np.ndarray, batch_size: int) -> None:
         """
         Args:
@@ -228,4 +226,8 @@ class DataPreparation:
         return training_set, test_set
 
     def get_labels_map(self) -> dict:
+        """
+        Returns:
+            dict: Dictionary containing mapping from labels to ints.
+        """
         return {index: value for index, value in enumerate(self.labels)}

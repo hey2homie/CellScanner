@@ -18,7 +18,8 @@ class Settings:
     results = None
     vis_type = None
     vis_dims = None
-    vis_channels = None
+    vis_channels_accuri = None
+    vis_channels_cytoflex = None
     num_umap_cores = None
     hardware = None
     lr = None
@@ -26,6 +27,8 @@ class Settings:
     lr_reduced = None
     num_batches = None
     num_epochs = None
+    cols_to_drop_accuri = None
+    cols_to_drop_cytoflex = None
     gating_type = None
 
     def __init__(self) -> None:

@@ -1,4 +1,3 @@
-import math
 import os
 from itertools import cycle
 from datetime import datetime
@@ -7,8 +6,10 @@ import numpy as np
 import umap
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score, \
     PrecisionRecallDisplay, ConfusionMatrixDisplay
-
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+
+from utilities.settings import Settings
 
 
 class UmapVisualization:
@@ -16,11 +17,13 @@ class UmapVisualization:
     UmapVisualization class is used to create UMAP embeddings of the dataframe that are used in low-dimensional
     projection of the results as well as the part of the training dataset.
     """
+
     def __init__(self, data: np.ndarray, num_cores: int, dims: int) -> None:
         """
         Args:
-            data (np.array): dataframe.
-            num_cores: amount of CPU cores used for the computation of embeddings
+            data (np.array): Dataframe to be reduced.
+            num_cores (int): Amount of CPU cores used for the computation of embeddings
+            dims (int): Dimension of the embeddings.
         """
         self.data = data
         self.num_cores = num_cores
@@ -29,9 +32,9 @@ class UmapVisualization:
 
     def __reduction(self) -> np.ndarray:
         """
-        Performs dimensional reduction to either 2D or 3D as specified in the settings.
+        Performs dimensional Reduction to either 2D or 3D as specified in the settings.
         Returns:
-            fitted (np.array): calculated embeddings.
+            fitted (np.array): Calculated embeddings.
         """
         reducer = umap.UMAP(n_components=self.dims, n_neighbors=25, min_dist=0.1, metric="euclidean",
                             n_jobs=self.num_cores)
@@ -41,27 +44,103 @@ class UmapVisualization:
     def get_embeddings(self) -> np.ndarray:
         """
         Returns:
-            embeddings (np.array): calculated embeddings.
+            embeddings (np.array): Calculated embeddings.
         """
         return self.embeddings
 
 
 class MplVisualization:
+    """
+    MplVisualization class is used to create plots MatPlotLib plots of models accuracy performance and visualisations of
+    predictions.
+    """
 
     def __init__(self, output_path: str) -> None:
+        """
+        Args:
+            output_path (str): Path to the output directory.
+        Returns:
+            None
+        """
         self.output_path = output_path
         datestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
         self.output_path = self.output_path + "/" + datestamp + "/"
         self.colors = cycle(["aqua", "darkorange", "cornflowerblue", "goldenrod", "rosybrown", "lightgreen",
-                             "lightgray", "orchid", "darkmagenta", "olive"])    # 10 colors should be enough
+                             "lightgray", "orchid", "darkmagenta", "olive"])    # 10 colors should be enough, I guess
         os.mkdir(self.output_path)
 
+    def save_predictions_visualizations(self, inputs: dict, settings: Settings) -> None:
+        """
+        Saves visualisations of the predictions.
+        Args:
+            inputs (dict): Dictionary of inputs.
+            settings (Settings): Settings object.
+        Returns:
+            None
+        """
+        # TODO: Use this from settings to avoid repeating code
+        channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
+                           "Width", "Time"]
+        channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
+                             "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
+                             "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width",
+                             "Time"]
+        if settings.fc_type == "Accuri":
+            channels_use = settings.vis_channels_accuri
+            indexes = [channels_accuri.index(channel) for channel in channels_use]
+        else:
+            channels_use = settings.vis_channels_cytoflex
+            indexes = [channels_cytoflex.index(channel) for channel in channels_use]
+        for file, data in inputs.items():
+            file = file.split("/")[-1].split(".")[0]
+            fig = plt.figure(figsize=(7, 7))
+            # TODO: Add option to do 2D scatter
+            ax = fig.add_subplot(projection="3d")
+            col_x = list(map(float, data[:, indexes[0]]))
+            col_y = list(map(float, data[:, indexes[1]]))
+            col_z = list(map(float, data[:, indexes[2]]))
+            labels = np.unique(data[:, -1])
+            cmap = plt.cm.jet
+            cmaplist = [cmap(i) for i in range(cmap.N)]
+            cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
+            bounds = np.linspace(0, len(labels), len(labels) + 1)
+            norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+            colors = cmap(np.linspace(0, 1, len(labels)))
+            for i, (label, color) in enumerate(zip(labels, colors), 1):
+                indexes = np.where(data[:, -1] == label)
+                axis_x = np.take(col_x, indexes, axis=0)
+                axis_y = np.take(col_y, indexes, axis=0)
+                axis_z = np.take(col_z, indexes, axis=0)
+                ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
+            ax.set_xlabel(channels_use[0])
+            ax.set_ylabel(channels_use[1])
+            ax.set_zlabel(channels_use[2])
+            ax.legend()
+            ax.set_title("3D Scatter Plot of " + file)
+            plt.savefig(self.output_path + file + "_" "predictions.png")
+
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Runs calculations for the accuracy metrics.
+        Args:
+            true_labels (np.array): Array of true labels.
+            predicted_labels (np.array): Array of predicted labels.
+        Returns:
+            None
+        """
         self.__roc(true_labels, predicted_labels)
         self.__precision_recall(true_labels, predicted_labels)
         self.__confusion_matrix(true_labels, predicted_labels)
 
     def __roc(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Creates ROC curve for each class and saves it to the output directory.
+        Args:
+            true_labels (np.array): Array of true labels.
+            predicted_labels (np.array): Array of predicted labels.
+        Returns:
+            None
+        """
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
@@ -93,6 +172,14 @@ class MplVisualization:
         plt.savefig(self.output_path + "/roc.png")
 
     def __precision_recall(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Creates Precision-Recall curve for each class and saves it to the output directory.
+        Args:
+            true_labels (np.array): Array of true labels.
+            predicted_labels (np.array): Array of predicted labels.
+        Returns:
+            None
+        """
         n_classes = true_labels.shape[1]
         precision = dict()
         recall = dict()
@@ -123,6 +210,14 @@ class MplVisualization:
         plt.savefig(self.output_path + "precision_recall.png")
 
     def __confusion_matrix(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Creates confusion matrix for each class and saves it to the output directory.
+        Args:
+            true_labels (np.array): Array of true labels.
+            predicted_labels (np.array): Array of predicted labels.
+        Returns:
+            None
+        """
         n_classes = true_labels.shape[1]
         rows = int(np.floor(np.sqrt(n_classes)))
         cols = int(np.ceil(n_classes / rows))
