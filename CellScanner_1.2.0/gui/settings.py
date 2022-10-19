@@ -24,7 +24,7 @@ class ComboBoxContent(Enum):
     Lr = ["1e-6", "1e-5", "1e-4", "1e-3", "1e-2"]
     Lr_reduced = ["1e-3", "1e-2"]
     LrScheduler = ["Constant", "Time Decay", "Step Decay", "Exponential Decay"]
-    Gating = ["Line", "Machine"]
+    Gating = ["Line", "Autoencoder", "Machine"]
 
     @property
     def get_value(self) -> list:
@@ -49,6 +49,9 @@ class SettingsWindow(QWidget):
     cols_to_drop_accuri = None
     cols_to_drop_cytoflex = None
     gating_type = None
+    autoencoder = None
+    mse_threshold = None  # TODO: Add adjustment to the widget
+    # MSE is logarithmic value !!!
 
     def __init__(self, stack: QStackedWidget, settings: Settings, *args, **kwargs) -> None:
         """
@@ -156,17 +159,20 @@ class SettingsWindow(QWidget):
         fc_choose = ComboBox(obj_name="combobox", geometry=[100, 37, 150, 26], name="fc_type",
                              parent=self.widget_general)
         fc_choose.addItems(ComboBoxContent.FC.get_value)
-        classifier_label = Label(text="Classifier:", obj_name="small", geometry=[280, 37, 79, 26],
+        fc_update_button = Button(text="Update FC", obj_name="settings", geometry=[260, 37, 100, 26],
+                                  parent=self.widget_general)
+        classifier_label = Label(text="Classifier:", obj_name="small", geometry=[370, 37, 79, 26],
                                  parent=self.widget_general)
-        classifier_choose = ComboBox(obj_name="combobox", geometry=[340, 37, 440, 26], name="model",
+        classifier_choose = ComboBox(obj_name="combobox", geometry=[440, 37, 270, 26], name="model",
                                      parent=self.widget_general)
+        classifier_info = Button(text="?", obj_name="small", geometry=[720, 37, 26, 26], parent=self.widget_general)
         classifier_choose.addItems(ComboBoxContent.Classifiers.get_value)
-        # TODO: Add pop-up window with info about which bacteria classifier can predict (from models_info.yaml)
+        # TODO: Add action to update FC and add pop-up with info about classifier
         output_label = Label(text="Output location:", obj_name="small", geometry=[28, 70, 124, 26],
                              parent=self.widget_general)
         output_location_label = Label(text=self.results, obj_name="small", geometry=[160, 70, 604, 26], name="results",
                                       parent=self.widget_general)
-        output_location_button = Button(text="...", obj_name="standard", geometry=[730, 70, 50, 26],
+        output_location_button = Button(text="...", obj_name="settings", geometry=[730, 70, 50, 26],
                                         parent=self.widget_general)
         HLine(obj_name="line", geometry=[100, 16, 705, 1], parent=self.widget_general)
         vis_label = Label(text="Visualizations", obj_name="settings", geometry=[0, 0, 153, 41],

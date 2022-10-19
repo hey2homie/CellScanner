@@ -2,16 +2,20 @@ import os
 from typing import Tuple
 
 import numpy as np
-import umap
+
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import callbacks
+from keras.models import Model, Sequential
+from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPooling1D, Dense, Activation, Flatten, \
+    Dropout
+from keras.optimizers import Adam
+from keras.losses import SparseCategoricalCrossentropy
+from keras.activations import elu
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from sklearn.preprocessing import label_binarize
 
-from utilities.data_preparation import FilePreparation
+from utilities.data_preparation import FilePreparation, DataPreparation
 from utilities.visualizations import UmapVisualization, MplVisualization
 from utilities.settings import Settings, ModelsInfo
-from utilities.data_preparation import DataPreparation
 
 
 def set_tf_hardware(hardware: str) -> None:
@@ -24,8 +28,10 @@ def set_tf_hardware(hardware: str) -> None:
     """
     try:
         tf.config.set_visible_devices([], hardware)
-    except:  # TODO: Add proper exception handling
+    except ValueError:
         raise Exception(hardware + "not available")
+    except RuntimeError:
+        raise Exception("TensorFlow is already running")
 
 
 class ClassificationModel:
@@ -46,70 +52,64 @@ class ClassificationModel:
         self.lr = lr
         self.model = self.__compile_model()
 
-    def __build_model(self) -> keras.Model:
+    def __build_model(self) -> Model:
         """
         Build_model function creates the model architecture and returns resulting Keras model.
         Returns
             keras.Model
         """
-        input_1 = keras.layers.Input(shape=self.feature_shape, name="standard")
-        input_2 = keras.layers.Input(shape=(3,), name="embeddings")
-        if self.fc_type == "Accuri":
-            a = keras.layers.Dense(500, kernel_initializer="he_uniform")(input_1)
-            a = keras.layers.Activation(activation=keras.activations.elu)(a)
-            a = keras.layers.Dense(300, kernel_initializer="he_uniform")(a)
-            a = keras.layers.Activation(activation=keras.activations.elu)(a)
-            a = keras.layers.Dense(300, kernel_initializer="he_uniform")(a)
-            a = keras.layers.Activation(activation=keras.activations.elu)(a)
-            a = keras.layers.Dense(150, kernel_initializer="he_uniform")(a)
-            a = keras.layers.Activation(activation=keras.activations.elu)(a)
-            a = keras.layers.Dense(50, kernel_initializer="he_uniform")(a)
-            a = keras.layers.Activation(activation=keras.activations.elu)(a)
-            a = keras.layers.Flatten()(a)
-            b = keras.layers.Dense(500, kernel_initializer="he_uniform")(input_2)
-            b = keras.layers.Activation(activation=keras.activations.elu)(b)
-            b = keras.layers.Dense(300, kernel_initializer="he_uniform")(b)
-            b = keras.layers.Activation(activation=keras.activations.elu)(b)
-            b = keras.layers.Dense(150, kernel_initializer="he_uniform")(b)
-            b = keras.layers.Activation(activation=keras.activations.elu)(b)
-            b = keras.layers.Dense(50, kernel_initializer="he_uniform")(b)
-            b = keras.layers.Activation(activation=keras.activations.elu)(b)
-            b = keras.layers.Flatten()(b)
-            out = keras.layers.Concatenate(axis=1)([a, b])
-            out = keras.layers.Dense(self.num_classes)(out)
-        # TODO: Add different architecture for the CytoFlew FC (if needed)
-        return keras.Model(inputs=[input_1, input_2], outputs=out)
+        model = Sequential([
+            InputLayer(shape=self.feature_shape),
+            BatchNormalization(),
+            Dense(100, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dense(300, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dropout(rate=0.2),
+            Dense(500, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dropout(rate=0.5),
+            Dense(300, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dropout(rate=0.3),
+            Dense(100, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dense(self.num_classes, activation="relu", kernel_initializer="he_uniform")
+        ])
+        return model
 
-    def __compile_model(self) -> keras.Model:
+    def __compile_model(self) -> Model:
         """
         Compiles model with the Adam optimizer and learning rate as specified in the settings configuration file.
         Returns:
-            model (keras.Model): Compiled model with specified optimizer and learning rate.
+            model (Model): Compiled model with specified optimizer and learning rate.
         """
         model = self.__build_model()
-        opt = keras.optimizers.Adam(self.lr)
-        model.compile(optimizer=opt, loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        opt = Adam(self.lr)
+        model.compile(optimizer=opt, loss=SparseCategoricalCrossentropy(from_logits=True),
                       metrics=["accuracy"])
         return model
 
-    def get_model(self) -> keras.Model:
+    def get_model(self) -> Model:
         """
         Returns
-            self.model (keras.Model): Returns compiled classifier.
+            self.model (Model): Returns compiled classifier.
         """
         return self.model
 
-    def get_loaded_model(self, weights: str) -> keras.Model:
+    def get_loaded_model(self, weights: str) -> Model:
         """
         Loads model, which is specified in the configuration file.
         Args:
             weights (str, optional): Relative or absolute path to the weights that will be loaded into the model.
         Returns:
-            self.model (keras.Model): Returns classifier model.
+            self.model (Model): Returns compiled classifier with loaded weights.
         """
         if os.path.exists(weights):
             self.model.load_weights(weights)
             return self.model
+        else:
+            raise Exception("Weights file not found")
 
 
 class ClassificationTraining:
@@ -132,23 +132,19 @@ class ClassificationTraining:
         set_tf_hardware(self.settings.hardware)  # TODO: Consider calling this function at the start of the application
         self.model, self.training_set, self.test_set = self.__prepare_training()
 
-    def __prepare_training(self) -> Tuple[keras.Model, tf.data.Dataset, tf.data.Dataset]:
+    def __prepare_training(self) -> Tuple[Model, tf.data.Dataset, tf.data.Dataset]:
         """
         Runs file preparation, resulting dataframe is used to create TensorFlow datasets, which are later used in
         training.
         Returns:
-            model (keras.Model), training_set (tf.data.Dataset), test_set (tf.data.Dataset): Tuple containing complied
+            model (Model), training_set (tf.data.Dataset), test_set (tf.data.Dataset): Tuple containing complied
             model, TensorFlow datasets for training and testing.
         """
         file_prep = FilePreparation(files=self.files, settings=self.settings)
         dataframe = file_prep.get_aggregated()
-        reducer = umap.UMAP(n_components=3, n_neighbors=25, min_dist=0.1, metric="euclidean",
-                            n_jobs=self.settings.num_umap_cores)
-        embeddings = reducer.fit_transform(dataframe)
         labels = file_prep.get_labels()
         labels_shape = file_prep.get_labels_shape()
-        data_preparation = DataPreparation(dataframe=dataframe, embeddings=embeddings, labels=labels,
-                                           batch_size=self.settings.num_batches)
+        data_preparation = DataPreparation(dataframe=dataframe, labels=labels, batch_size=self.settings.num_batches)
         labels_map = data_preparation.get_labels_map()
         training_set, test_set = data_preparation.create_datasets()
         features_shape = None
@@ -181,15 +177,14 @@ class ClassificationTraining:
         Returns:
             None
         """
-        # TODO: Create callbacks for learning rate scheduling if necessary
         path_to_model = "./classifiers/" + self.model_name
-        callbacks_to_use = [callbacks.ModelCheckpoint(path_to_model, save_best_only=True)]
+        callbacks_to_use = [ModelCheckpoint(path_to_model, save_best_only=True)]
         if self.settings.lr_scheduler == "Time Based Decay":
-            callbacks_to_use.append(callbacks.LearningRateScheduler(self.__time_based_decay))
+            callbacks_to_use.append(LearningRateScheduler(self.__time_based_decay))
         elif self.settings.lr_scheduler == "Step Decay":
-            callbacks_to_use.append(callbacks.LearningRateScheduler(self.__step_decay))
+            callbacks_to_use.append(LearningRateScheduler(self.__step_decay))
         elif self.settings.lr_scheduler == "Exponential Decay":
-            callbacks_to_use.append(callbacks.LearningRateScheduler(self.__exp_decay))
+            callbacks_to_use.append(LearningRateScheduler(self.__exp_decay))
         self.model.fit(self.training_set, validation_data=self.test_set, epochs=self.settings.num_epochs,
                        callbacks=callbacks_to_use)
 
@@ -204,11 +199,10 @@ class ClassificationTraining:
         decay = self.settings.lr * self.settings.num_epochs
         return lr * 1 / (1 + decay * epoch)
 
-    def __step_decay(self, epoch: int, lr: float) -> float:
+    def __step_decay(self, epoch: int) -> float:
         """
         Args:
             epoch (int): Current epoch
-            lr (float): Current learning rate
         Returns:
             decay_rate (float): New learning rate
         """
@@ -216,11 +210,10 @@ class ClassificationTraining:
         epochs_drop = 10.0
         return self.settings.lr * np.pow(drop_rate, np.floor(epoch / epochs_drop))
 
-    def __exp_decay(self, epoch: int, lr: float) -> float:
+    def __exp_decay(self, epoch: int) -> float:
         """
         Args:
             epoch (int): Current epoch
-            lr (float): Current learning rate
         Returns:
             decay_rate (float): New learning rate
         """
@@ -232,24 +225,23 @@ class ClassificationResults:
     """
     ClassificationResults class is used to classify input files using previously trained model.
     """
-    def __init__(self, files: list, num_features: tuple, num_classes: tuple, labels_map: dict, settings: Settings,
-                 diagnostics: bool = False) -> None:
+    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo, diagnostics: bool = False) -> None:
         """
         Args:
             files (list): List of strings containing absolute paths to the desired files.
-            num_features (tuple): Tuple containing number of features in the dataset used to initialize input layer.
-            num_classes (tuple): Tuple containing number of classification files.
-            labels_map (dict): Dictionary containing mapping between labels and their indices.
             settings (Settings): Settings object containing settings for making predictions.
             diagnostics (bool, optional): If True, diagnostics is run instead of prediction. Defaults to False.
         """
         self.files = files
-        self.labels_map = labels_map
+        self.models_info = models_info
+        self.labels_map = self.models_info.get_labels_map()
         self.settings = settings
         self.diagnostics = diagnostics
         set_tf_hardware(settings.hardware)  # TODO: Consider calling this function at the start of the application
-        self.model = ClassificationModel(num_features=num_features, num_classes=num_classes,
-                                         fc_type=self.settings.fc_type, lr=self.settings.lr)
+        self.model = ClassificationModel(num_features=models_info.get_features_shape(),
+                                         num_classes=models_info.get_features_shape(),
+                                         fc_type=self.settings.fc_type,
+                                         lr=self.settings.lr)
         self.true_labels = {}
         self.outputs = {}
         self.__classification()
@@ -286,7 +278,6 @@ class ClassificationResults:
         umap = UmapVisualization(self.outputs[file], num_cores=int(self.settings.num_umap_cores), dims=3)
         embeddings = umap.get_embeddings()
         prediction = self.model.predict((self.outputs[file], embeddings))
-        # labels = np.zeros(shape=prediction)
         for _, pred in enumerate(prediction):
             probabilities = tf.nn.softmax(pred)
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
@@ -354,3 +345,49 @@ class ToolDiagnosticsCalculations:
         for i in range(0, len(self.true_labels)):
             labels.append("Correct") if self.true_labels[i] == self.predicted_labels[i] else labels.append("Incorrect")
         return labels
+
+
+class AutoEncoder:
+
+    def __init(self, settings: Settings, model_info: ModelsInfo) -> None:
+        self.feature_shape = None
+        self.autoencoder_name = "./autoencoders/" + settings.autoencoder
+        self.model = self.__compile_model()
+
+    def __build_model(self) -> Model:
+        encoder = Sequential([
+            InputLayer(input_shape=self.feature_shape),
+            Lambda(lambda x: tf.expand_dims(x, -1)),
+            BatchNormalization(),
+            Conv1D(filters=20, kernel_size=5, padding="valid"),
+            MaxPooling1D(),
+            Activation(activation=elu),
+            BatchNormalization(),
+            Dense(units=15, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dense(units=7, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Flatten(),
+            Dense(units=5, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+        ])
+        decoder = Sequential([
+            Dense(units=7, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dense(units=15, kernel_initializer="he_uniform"),
+            Activation(activation=elu),
+            Dense(units=self.feature_shape, kernel_initializer="he_uniform")
+        ])
+        autoencoder = Model(inputs=encoder.input, outputs=decoder(encoder.output))
+
+        return autoencoder
+
+    def __compile_model(self) -> Model:
+        model = self.__build_model()
+        model.compile(loss="mse", optimizer=Adam(lr=1e-3))
+        return model
+
+    def get_model(self) -> Model:
+        if os.path.exists(self.autoencoder_name):
+            self.model.load_weights(self.autoencoder_name)
+            return self.model

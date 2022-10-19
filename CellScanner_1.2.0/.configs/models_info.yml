@@ -1,24 +1,36 @@
-classifier_14_512.h5:
-- labels_map:
-    0: Bacteroides thetaiotaomicron
-    1: Bacteroides uniformis
-    2: Barsniella intestihominis
-    3: Bifidobacterium adolescentis
-    4: Blank
-    5: Blautia hydrogenotrophica
-    6: Collinsella aerofaciens
-    7: Escherichia coli
-    8: Faecalibacterium prausnitzii
-    9: Parabacteroides merdae
-    10: Prevotella copri
-    11: Roseburia intestinalis
-    12: Ruminococcus bromii
-- features_shape: (12,)
-- labels_shape: (13,)
-test_model.h5:
-- labels_map:
-    0: Bacteroides uniformis
-    1: Bifidobacterium adolescentis
-    2: Blank
-- features_shape: (13,)
-- labels_shape: (3,)
+autoencoders:
+  ae_accuri_13.h5:
+    fc_type: Accuri
+    features:
+    - FSC-A
+    - SSC-A
+    - FL1-A
+    - FL2-A
+    - FL3-A
+    - FL4-A
+    - FSC-H
+    - SSC-H
+    - FL1-H
+    - FL2-H
+    - FL3-H
+    - FL4-H
+    - Width
+    num_features: 13
+classifiers:
+  classifier_14_512.h5:
+    features_shape: (12,)
+    labels_map:
+      0: Bacteroides thetaiotaomicron
+      1: Bacteroides uniformis
+      2: Barsniella intestihominis
+      3: Bifidobacterium adolescentis
+      4: Blank
+      5: Blautia hydrogenotrophica
+      6: Collinsella aerofaciens
+      7: Escherichia coli
+      8: Faecalibacterium prausnitzii
+      9: Parabacteroides merdae
+      10: Prevotella copri
+      11: Roseburia intestinalis
+      12: Ruminococcus bromii
+    labels_shape: (13,)

@@ -1,11 +1,11 @@
 from typing import Tuple
 
 import tensorflow as tf
-import pandas as pd
 import numpy as np
+import pandas as pd
 import fcsparser
 
-from utilities.settings import Settings
+from utilities.settings import Settings, ModelsInfo
 
 
 class FilePreparation:
@@ -15,15 +15,18 @@ class FilePreparation:
     initializing class and later calling get_aggregated() method or processed individually with the get_data() method.
     """
 
-    def __init__(self, files: list, settings: Settings) -> None:
+    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo) -> None:
         """
         Args:
             files (list): List of strings containing absolute path to the desired files.
             settings (Settings): Settings object.
         """
         self.files_list = files
+        self.models_info = models_info
         self.fc_type = settings.fc_type
         self.gating_type = settings.gating_type
+        self.autoencoder = settings.autoencoder
+        self.mse_threshold = settings.mse_threshold
         self.cols_drop = settings.cols_to_drop_accuri if self.fc_type == "Accuri" else settings.cols_to_drop_cytoflex
         self.data = None
         self.aggregated = None
@@ -31,6 +34,7 @@ class FilePreparation:
 
     def __check_extension(self):
         # TODO: Consider showing warning message
+        # TODO: Add support for Excel files
         """
         Checks if the provided files have correct extension, which can be .fcs, .csv or .tsv.
         Returns:
@@ -50,6 +54,7 @@ class FilePreparation:
 
     def __drop_columns(self) -> None:
         # TODO: Add extra columns from config
+        # TODO: Drop columns according to the autoencoder features
         """
         By default, drops only "time" column. Alternatively, extra columns can be specified in the settings.
         Returns:
@@ -82,10 +87,11 @@ class FilePreparation:
         """
         if self.gating_type == "Line":
             if self.fc_type == "Accuri":
+                # TODO: Add support for custom boundaries
                 for index, row in self.data.iterrows():
                     if (10 ** row["FL3-A"]) > (0.0241 * (10 ** row["FL3-A"]) ** 1.0996):
                         self.data.drop(index)
-                    elif row["FSC-A"] > 5.0 and row["SSC-A"] > 4.0:     # Values are after log10 transformation
+                    elif row["FSC-A"] > 5.0 and row["SSC-A"] > 4.0:
                         self.data.drop(index)
                     elif row["FSC-A"] > (row["FSC-H"] + 0.5) or row["FSC-A"] < (row["FSC-H"] - 0.5):
                         self.data.drop(index)
@@ -95,20 +101,15 @@ class FilePreparation:
                         self.data.drop(index)
                     elif row["FSC-A"] > (row["FSC-H"] + 0.6) or row["FSC-A"] > (row["FSC-H"] - 0.6):
                         self.data.drop(index)
+        elif self.gating_type == "AutoEncoder":
+            from utilities.classification_utils import AutoEncoder
+            autoencoder = AutoEncoder()
+            autoencoder = autoencoder.get_model()
+            predicted = autoencoder.predict(self.data)
+            mse = np.mean(np.power(self.data - predicted, 2), axis=1)
+            self.data = self.data[mse < self.mse_threshold]
         else:
-            pass
-            # TODO: Do classifier to detect blanks and throw them away from dataset. Delete the thing above.
-
-    def __aggregate(self) -> None:
-        """
-        Aggregates individual dataframes into one big dataframe, which is used for the model training.
-        Returns:
-            None
-        """
-        if self.aggregated is not None:
-            self.aggregated = pd.concat([self.aggregated, self.data])
-        else:
-            self.aggregated = self.data
+            pass    # TODO: Implementation of method from the previous version
 
     def __add_labels(self, file: str) -> None:
         """
@@ -119,7 +120,6 @@ class FilePreparation:
         Returns:
             None
         """
-        # TODO: Consider regex for finding bacteria name
         split = file.split("/")[-1].split("-")[0].split("_")
         for row in range(0, self.data.shape[0]):
             try:
@@ -140,13 +140,16 @@ class FilePreparation:
         self.__scale()
         self.__gate()
 
-    def get_data(self, file: str) -> np.ndarray:
+    def __aggregate(self) -> None:
         """
+        Aggregates individual dataframes into one big dataframe, which is used for the model training.
         Returns:
-            np.array: Returns transformed dataset corresponding to the individual input file.
+            None
         """
-        self.__run_transformation(file)
-        return self.data
+        if self.aggregated is not None:
+            self.aggregated = pd.concat([self.aggregated, self.data])
+        else:
+            self.aggregated = self.data
 
     def get_aggregated(self) -> np.ndarray:
         """
@@ -159,6 +162,14 @@ class FilePreparation:
             self.__add_labels(file)
             self.__aggregate()
         return np.array(self.aggregated)
+
+    def get_data(self, file: str) -> np.ndarray:
+        """
+        Returns:
+            np.array: Returns transformed dataset corresponding to the individual input file.
+        """
+        self.__run_transformation(file)
+        return self.data
 
     def get_labels(self) -> np.ndarray:
         """
@@ -182,7 +193,7 @@ class DataPreparation:
     Dataset format.
     """
 
-    def __init__(self, dataframe: np.ndarray, embeddings: np.ndarray, labels: np.ndarray, batch_size: int) -> None:
+    def __init__(self, dataframe: np.ndarray, labels: np.ndarray = None, batch_size: int = 256) -> None:
         """
         Args:
             dataframe (np.ndarray): Dataframe containing data points for the training.
@@ -190,11 +201,9 @@ class DataPreparation:
             batch_size (int): Size of the batches for training.
         """
         self.dataframe = dataframe
-        self.embeddings = embeddings
         self.labels = labels
         self.labels_ints = None
         self.batch_size = batch_size
-        self.__map_labels()
 
     def __map_labels(self) -> None:
         """
@@ -212,9 +221,12 @@ class DataPreparation:
         Returns:
             (tf.data.Dataset, tf.data.Dataset): Tuple of tf.data.Datasets for training and validation.
         """
-        dataset = tf.data.Dataset.from_tensor_slices(({"standard": self.dataframe, "embeddings": self.embeddings},
-                                                      self.labels_ints))
-        dataset = dataset.shuffle(tf.data.experimental.cardinality(dataset).numpy())    # TODO: Check if this is correct
+        if self.labels is not None:
+            self.__map_labels()
+            dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.labels_ints))
+        else:
+            dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.dataframe))  # Case for autoencoders
+        dataset = dataset.shuffle(tf.data.experimental.cardinality(dataset).numpy())
         dataset_length = sum(1 for _ in dataset)
         training_length = np.rint(dataset_length * 0.8)
         training_set = dataset.take(training_length)

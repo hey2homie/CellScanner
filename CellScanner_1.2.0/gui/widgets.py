@@ -184,20 +184,14 @@ class Button(QPushButton, Widget):
                 files = stack.widget(1).children()[0].get_files()
                 settings = stack.widget(0).get_settings()
                 model_settings = stack.widget(0).get_models_info()
-                model_settings.model_name = settings.model
-                labels_map = model_settings.get_labels_map()
-                features_shape = model_settings.get_features_shape()
-                labels_shape = model_settings.get_labels_shape()
+                model_settings.classifier_name = settings.model
                 # There is super weird bug that elif below works with original button's text
                 if self.text() == "Diagnostics":
-                    classifier = ClassificationResults(files=files, num_features=features_shape,
-                                                       num_classes=labels_shape, labels_map=labels_map,
-                                                       settings=settings, diagnostics=True)
+                    classifier = ClassificationResults(files=files, settings=settings, models_info=model_settings,
+                                                       diagnostics=True)
                     outputs = classifier.run_diagnostics()
                 else:
-                    classifier = ClassificationResults(files=files, num_features=features_shape,
-                                                       num_classes=labels_shape, labels_map=labels_map,
-                                                       settings=settings)
+                    classifier = ClassificationResults(files=files, settings=settings, models_info=model_settings)
                     outputs = classifier.get_outputs()
                     stack.widget(2).set_items(files)
                 stack.widget(2).set_inputs(outputs)
