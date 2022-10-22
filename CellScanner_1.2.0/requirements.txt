@@ -61,6 +61,7 @@ MarkupSafe @ file:///Users/runner/miniforge3/conda-bld/markupsafe_1648737588665/
 matplotlib @ file:///Users/runner/miniforge3/conda-bld/matplotlib-suite_1663359044092/work
 matplotlib-inline @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-inline_1660814786464/work
 mistune @ file:///Users/runner/miniforge3/conda-bld/mistune_1635844784701/work
+mlxtend @ file:///home/conda/feedstock_root/build_artifacts/mlxtend_1663458188941/work
 nbclient @ file:///home/conda/feedstock_root/build_artifacts/nbclient_1646999386773/work
 nbconvert @ file:///Users/runner/miniforge3/conda-bld/nbconvert_1648465447893/work
 nbformat @ file:///home/conda/feedstock_root/build_artifacts/nbformat_1664204096384/work
@@ -90,6 +91,7 @@ pure-eval @ file:///home/conda/feedstock_root/build_artifacts/pure_eval_16428759
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser @ file:///home/conda/feedstock_root/build_artifacts/pycparser_1636257122734/work
+pydot==1.4.2
 Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1660666458521/work
 pynndescent==0.5.7
 pyparsing @ file:///home/conda/feedstock_root/build_artifacts/pyparsing_1652235407899/work

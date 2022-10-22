@@ -121,14 +121,14 @@ class ModelsInfo:
             name (str): name of the model.
         Returns: None
         """
-        self.classifier_name = name
+        self.autoencoder_name = name
 
     def get_features(self) -> list:
         """
         Returns:
             features (list): a list of features.
         """
-        return self.classifiers[self.classifier_name][0]["features"]
+        return self.classifiers[self.classifier_name]["features"]
 
     def set_classifier(self, name: str) -> None:
         """

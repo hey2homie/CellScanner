@@ -34,3 +34,10 @@ classifiers:
       11: Roseburia intestinalis
       12: Ruminococcus bromii
     labels_shape: (13,)
+  test_bt_bi_ec.h5:
+  - labels_map:
+      0: Bacteroides thetaiotaomicron
+      1: Barsniella intestihominis
+      2: Escherichia coli
+  - features_shape: (13,)
+  - labels_shape: (3,)

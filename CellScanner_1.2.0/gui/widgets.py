@@ -185,6 +185,7 @@ class Button(QPushButton, Widget):
                 settings = stack.widget(0).get_settings()
                 model_settings = stack.widget(0).get_models_info()
                 model_settings.classifier_name = settings.model
+                model_settings.autoencoder_name = settings.autoencoder
                 # There is super weird bug that elif below works with original button's text
                 if self.text() == "Diagnostics":
                     classifier = ClassificationResults(files=files, settings=settings, models_info=model_settings,

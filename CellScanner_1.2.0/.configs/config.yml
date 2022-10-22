@@ -1,16 +1,16 @@
+autoencoder: ae_accuri_13.h5
 cols_to_drop_accuri:
 - Time
 cols_to_drop_cytoflex:
 - Time
 fc_type: Accuri
-gating_type: Line
-autoencoder: ae_accuri_13.h5
-mse_threshold: -1
+gating_type: Autoencoder
 hardware: GPU
 lr: 1e-5
 lr_reduced: 1e-3
 lr_scheduler: Time Decay
-model: classifier_14_512.h5
+model: test_bt_bi_ec.h5
+mse_threshold: -1
 num_batches: 512
 num_classes: 11
 num_epochs: 100

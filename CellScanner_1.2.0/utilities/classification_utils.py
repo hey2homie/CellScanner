@@ -11,7 +11,6 @@ from keras.optimizers import Adam
 from keras.losses import SparseCategoricalCrossentropy
 from keras.activations import elu
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
-from sklearn.preprocessing import label_binarize
 
 from utilities.data_preparation import FilePreparation, DataPreparation
 from utilities.visualizations import UmapVisualization, MplVisualization
@@ -46,8 +45,8 @@ class ClassificationModel:
             num_features (tuple): Tuple containing number of features in the dataset used to initialize input layer.
             num_classes (tuple): Tuple containing number of classification files.
         """
+        self.feature_shape = num_features[0]
         self.num_classes = num_classes[0]
-        self.feature_shape = num_features
         self.fc_type = fc_type
         self.lr = lr
         self.model = self.__compile_model()
@@ -59,7 +58,7 @@ class ClassificationModel:
             keras.Model
         """
         model = Sequential([
-            InputLayer(shape=self.feature_shape),
+            InputLayer(input_shape=self.feature_shape),
             BatchNormalization(),
             Dense(100, kernel_initializer="he_uniform"),
             Activation(activation=elu),
@@ -140,16 +139,16 @@ class ClassificationTraining:
             model (Model), training_set (tf.data.Dataset), test_set (tf.data.Dataset): Tuple containing complied
             model, TensorFlow datasets for training and testing.
         """
-        file_prep = FilePreparation(files=self.files, settings=self.settings)
+        file_prep = FilePreparation(files=self.files, settings=self.settings, models_info=self.models_info)
         dataframe = file_prep.get_aggregated()
         labels = file_prep.get_labels()
         labels_shape = file_prep.get_labels_shape()
         data_preparation = DataPreparation(dataframe=dataframe, labels=labels, batch_size=self.settings.num_batches)
-        labels_map = data_preparation.get_labels_map()
         training_set, test_set = data_preparation.create_datasets()
+        labels_map = data_preparation.get_labels_map()
         features_shape = None
         for elem in training_set.take(1):
-            features_shape = elem[0]["standard"][0].shape  # TODO: Consider changing this
+            features_shape = elem[0][1].shape  # TODO: Consider changing this
         model = ClassificationModel(num_classes=labels_shape, num_features=features_shape,
                                     fc_type=self.settings.fc_type, lr=float(self.settings.lr))
         model = model.get_model()
@@ -239,7 +238,7 @@ class ClassificationResults:
         self.diagnostics = diagnostics
         set_tf_hardware(settings.hardware)  # TODO: Consider calling this function at the start of the application
         self.model = ClassificationModel(num_features=models_info.get_features_shape(),
-                                         num_classes=models_info.get_features_shape(),
+                                         num_classes=models_info.get_labels_shape(),
                                          fc_type=self.settings.fc_type,
                                          lr=self.settings.lr)
         self.true_labels = {}
@@ -253,7 +252,7 @@ class ClassificationResults:
         Returns:
             None
         """
-        file_preparation = FilePreparation(self.files, settings=self.settings)
+        file_preparation = FilePreparation(self.files, settings=self.settings, models_info=self.models_info)
         model_name = "./classifiers/" + self.settings.model
         self.model = self.model.get_loaded_model(weights=model_name)
         if self.diagnostics:
@@ -277,7 +276,7 @@ class ClassificationResults:
             self.outputs[file] = file_preparation.get_data(file)
         umap = UmapVisualization(self.outputs[file], num_cores=int(self.settings.num_umap_cores), dims=3)
         embeddings = umap.get_embeddings()
-        prediction = self.model.predict((self.outputs[file], embeddings))
+        prediction = self.model.predict(self.outputs[file])
         for _, pred in enumerate(prediction):
             probabilities = tf.nn.softmax(pred)
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
@@ -331,10 +330,8 @@ class ToolDiagnosticsCalculations:
         Returns:
             None
         """
-        true_labels = label_binarize(self.true_labels, classes=np.unique(self.true_labels))
-        predicted_labels = label_binarize(self.predicted_labels, classes=np.unique(self.predicted_labels))
         vis = MplVisualization(output_path=self.output_path)
-        vis.diagnostics(true_labels=true_labels, predicted_labels=predicted_labels)
+        vis.diagnostics(true_labels=self.true_labels, predicted_labels=self.predicted_labels)
 
     def get_misclassified_points(self) -> list:
         """
@@ -349,8 +346,8 @@ class ToolDiagnosticsCalculations:
 
 class AutoEncoder:
 
-    def __init(self, settings: Settings, model_info: ModelsInfo) -> None:
-        self.feature_shape = None
+    def __init__(self, settings: Settings) -> None:
+        self.feature_shape = 13     # TODO: Load from models_info
         self.autoencoder_name = "./autoencoders/" + settings.autoencoder
         self.model = self.__compile_model()
 
@@ -374,7 +371,7 @@ class AutoEncoder:
         decoder = Sequential([
             Dense(units=7, kernel_initializer="he_uniform"),
             Activation(activation=elu),
-            Dense(units=15, kernel_initializer="he_uniform"),
+            Dense(units=10, kernel_initializer="he_uniform"),
             Activation(activation=elu),
             Dense(units=self.feature_shape, kernel_initializer="he_uniform")
         ])

@@ -22,6 +22,7 @@ class FilePreparation:
             settings (Settings): Settings object.
         """
         self.files_list = files
+        self.settings = settings
         self.models_info = models_info
         self.fc_type = settings.fc_type
         self.gating_type = settings.gating_type
@@ -101,12 +102,12 @@ class FilePreparation:
                         self.data.drop(index)
                     elif row["FSC-A"] > (row["FSC-H"] + 0.6) or row["FSC-A"] > (row["FSC-H"] - 0.6):
                         self.data.drop(index)
-        elif self.gating_type == "AutoEncoder":
+        elif self.gating_type == "Autoencoder":
             from utilities.classification_utils import AutoEncoder
-            autoencoder = AutoEncoder()
+            autoencoder = AutoEncoder(settings=self.settings)
             autoencoder = autoencoder.get_model()
             predicted = autoencoder.predict(self.data)
-            mse = np.mean(np.power(self.data - predicted, 2), axis=1)
+            mse = np.log10(np.mean(np.power(self.data - predicted, 2), axis=1))
             self.data = self.data[mse < self.mse_threshold]
         else:
             pass    # TODO: Implementation of method from the previous version
@@ -226,7 +227,7 @@ class DataPreparation:
             dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.labels_ints))
         else:
             dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.dataframe))  # Case for autoencoders
-        dataset = dataset.shuffle(tf.data.experimental.cardinality(dataset).numpy())
+        dataset = dataset.shuffle(self.dataframe.shape[0])
         dataset_length = sum(1 for _ in dataset)
         training_length = np.rint(dataset_length * 0.8)
         training_set = dataset.take(training_length)
