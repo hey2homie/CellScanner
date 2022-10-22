@@ -2,9 +2,9 @@ from enum import Enum
 from typing import Any
 
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
-    QFrame, QComboBox, QLineEdit, QStyleOptionComboBox, QStyle
+    QFrame, QComboBox, QLineEdit, QTextEdit
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPainter, QPalette
+from PyQt6.QtGui import QPainter
 
 from utilities.classification_utils import ClassificationResults
 from utilities.settings import ModelsInfo
@@ -22,6 +22,7 @@ class Styles(Enum):
     Button = "gui/style_sheets/buttons.css"
     ComboBox = "gui/style_sheets/combobox.css"
     DropArea = "gui/style_sheets/lists.css"
+    Markdown = "gui/style_sheets/markdown.css"
 
 
 class Widget(QWidget):
@@ -104,6 +105,17 @@ class HLine(QFrame, Widget):
         self.setFrameShadow(QFrame.Shadow.Sunken)
 
 
+class TextEdit(QTextEdit, Widget):
+
+    def __init__(self, *args, **kwargs) -> None:
+        """
+        Args:
+            *args:
+            **kwargs:
+        """
+        super(TextEdit, self).__init__(widget=Styles.Markdown, *args, **kwargs)
+
+
 class EditLine(QLineEdit, Widget):
     """
     Modified QLineEdit class, which inherits set_geometry and set_class from Widget parent class.
@@ -137,7 +149,7 @@ class Button(QPushButton, Widget):
         """
         Adds actions to the buttons which is triggered upon click.
         """
-        def get_top_level_parent(widget: QWidget) -> QStackedWidget:
+        def get_top_level_parent(widget: Widget) -> QStackedWidget:
             """
             Returns first parent of widget which has QStackedWidget as class attribute.
             Args:
@@ -226,8 +238,12 @@ class Button(QPushButton, Widget):
 
         if self.text() == "Prediction" or self.text() == "Tool\nDiagnostics":
             self.clicked.connect(lambda: show_file_selection_window(windows))
+        elif self.text() == "Training":
+            self.clicked.connect(lambda: windows.setCurrentIndex(4))
         elif self.text() == "Settings":
             self.clicked.connect(lambda: windows.setCurrentIndex(3))
+        elif self.text() == "Help":
+            self.clicked.connect(lambda: windows.setCurrentIndex(5))
         elif self.text() == "Menu":
             self.clicked.connect(lambda: clear(windows))
         elif self.text() == "Clear Data":
@@ -237,8 +253,6 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: show_results(windows))
         elif self.text() == "Apply":
             self.clicked.connect(lambda: windows.widget(3).update_config())
-        elif self.text() == "Training":
-            self.clicked.connect(lambda: windows.setCurrentIndex(4))
         elif self.text() == "Train":
             self.clicked.connect(lambda: windows.widget(4).begin_training())
         elif self.text() == "...":
