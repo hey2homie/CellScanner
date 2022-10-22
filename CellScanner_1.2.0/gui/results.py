@@ -1,11 +1,14 @@
 from PyQt6 import QtWebEngineWidgets
 from PyQt6.QtWidgets import QWidget, QStackedWidget, QGridLayout
+
 import plotly.express as px
 import numpy as np
 import pandas as pd
 
 from utilities.settings import Settings
 from utilities.visualizations import MplVisualization
+
+from gui.widgets import Widget, Button, Styles, FileBox
 
 
 class ResultsWindow(QWidget):
@@ -30,7 +33,6 @@ class ResultsWindow(QWidget):
         self.stack.addWidget(self)
 
     def __init_widgets(self) -> None:
-        from widgets import Widget, Button, Styles, FileBox
         self.widget_graph = Widget(widget=Styles.Widget, obj_name="", geometry=[273, 43, 581, 450], parent=self)
         self.layout_graph = QGridLayout(parent=self.widget_graph)
         self.layout_graph.addWidget(self.browser)

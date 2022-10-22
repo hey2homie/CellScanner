@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import QWidget, QStackedWidget, QMessageBox
 from utilities.classification_utils import ClassificationTraining
 from utilities.settings import Settings
 
+from gui.widgets import DropBox, Button, EditLine
+
 
 class TrainingWindow(QWidget):
 
@@ -14,7 +16,6 @@ class TrainingWindow(QWidget):
         self.__init_ui()
 
     def __init_ui(self):
-        from widgets import DropBox, Button, EditLine
         self.setWindowTitle(self.title)
         self.setGeometry(self.stack.currentWidget().geometry())
         model_name = EditLine(obj_name="input", geometry=[46, 43, 808, 30], parent=self)

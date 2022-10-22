@@ -6,13 +6,15 @@ from PyQt6.QtCore import Qt
 
 from utilities.settings import Settings
 
+from gui.widgets import Widget, Styles, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label
+
 
 class ComboBoxContent(Enum):
     """
     Enum containing options for the Combo Boxes used in SettingsWindow.
     """
     FC = iter(["Accuri", "Cytoflex"])
-    Classifiers = iter(os.listdir("../classifiers/"))
+    Classifiers = iter(os.listdir("./classifiers/"))
     VisType = iter(["UMAP", "Channels"])
     Dims = iter(["2D", "3D"])
     Channels_Accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
@@ -99,7 +101,6 @@ class SettingsWindow(QWidget):
         # multiple choices in some combo-boxes (namely in channels for visualisations). Definitely need to come up with
         # more clever way to organise all the labels, box-combo and input fields, maybe with the grids with custom
         # geometry of cells. Other interface related issues, but that's for later.
-        from widgets import Widget, Styles, Button
         # TODO: Set objects names according to style sheet
         self.widget_settings = Widget(widget=Styles.Widget, obj_name="settings", geometry=[46, 90, 808, 400],
                                       parent=self)
@@ -115,7 +116,6 @@ class SettingsWindow(QWidget):
         Button(text="Apply", obj_name="standard", geometry=[652, 518, 200, 60], parent=self)
 
     def __init_elements(self) -> None:
-        from widgets import Button, Label, HLine, ComboBox, CheckableComboBox, EditLine
 
         def scheduler_options_show(widget: ComboBox) -> None:
             if widget.currentIndex() != 0:
@@ -256,7 +256,6 @@ class SettingsWindow(QWidget):
         [label.setAlignment(Qt.AlignmentFlag.AlignLeft) for label in [general_label, vis_label, nn_label, data_label]]
 
     def __set_values_from_config(self) -> None:
-        from widgets import ComboBox, CheckableComboBox, EditLine
         """
         Sets indexes of the combo-boxes and the input fields from the configuration file upon creating instance of the
         class.
@@ -282,7 +281,6 @@ class SettingsWindow(QWidget):
         Returns:
             None
         """
-        from widgets import ComboBox, CheckableComboBox, EditLine, Label
         for widget in [self.widget_general, self.widget_vis, self.widget_nn, self.widget_data]:
             for child in widget.children():
                 if isinstance(child, ComboBox):

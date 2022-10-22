@@ -1,5 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QStackedWidget
 
+from gui.widgets import DropBox, Button
+
 
 class FileSelector(QWidget):
 
@@ -11,7 +13,6 @@ class FileSelector(QWidget):
         self.__init_ui()
 
     def __init_ui(self):
-        from widgets import DropBox, Button
         self.setWindowTitle(self.title)
         self.setGeometry(self.stack.currentWidget().geometry())
         DropBox(obj_name="drop", geometry=[46, 43, 808, 450], parent=self)

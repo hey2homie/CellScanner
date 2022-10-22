@@ -1,6 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QStackedWidget
 from PyQt6.QtCore import Qt
 
+from gui.widgets import Label, TextEdit, Button
+
 
 class AboutWindow(QWidget):
 
@@ -16,7 +18,6 @@ class AboutWindow(QWidget):
         self.stack.addWidget(self)
 
     def __init_widget(self) -> None:
-        from widgets import Label, TextEdit, Button
         tittle = Label(text="About CellScanner", obj_name="tittle", geometry=[0, 9, 895, 69], parent=self)
         tittle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         manual = TextEdit(obj_name="markdown", geometry=[46, 91, 808, 402], parent=self)

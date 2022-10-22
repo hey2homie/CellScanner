@@ -1,15 +1,7 @@
-import os
-import sys
-
-from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
+from PyQt6.QtWidgets import QMainWindow, QStackedWidget
 from PyQt6.QtCore import Qt
 
-from widgets import Label, Button
-from gui.file_selection import FileSelector
-from gui.results import ResultsWindow
-from gui.settings import SettingsWindow
-from gui.training import TrainingWindow
-from gui.about import AboutWindow
+from gui.widgets import Label, Button
 from utilities.settings import Settings, ModelsInfo
 
 
@@ -52,30 +44,11 @@ class MainWindow(QMainWindow):
     def get_settings(self) -> Settings:
         return self.settings
 
-    # TODO: Pythonic way for getters
     def set_settings(self) -> None:
-        self.settings.save_settings()   # Do I need this?
+        self.settings.save_settings()
 
     def get_models_info(self) -> ModelsInfo:
         return self.models_info
 
-    # TODO: Pythonic way for getters
     def get_stack(self) -> QStackedWidget:
         return self.stack
-
-
-def main():
-    app = QApplication(sys.argv)
-    # TODO: Change Order and indexes in buttons in widgets.py
-    start = MainWindow()
-    FileSelector(stack=start.get_stack())
-    ResultsWindow(stack=start.get_stack(), settings=start.get_settings())
-    SettingsWindow(stack=start.get_stack(), settings=start.get_settings())
-    TrainingWindow(stack=start.get_stack(), settings=start.get_settings())
-    AboutWindow(stack=start.get_stack())
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    os.chdir("../")
-    main()
