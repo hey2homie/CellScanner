@@ -2,9 +2,34 @@ import ast
 import yaml
 import inspect
 import os
+import glob
+from enum import Enum
 
 
-# TODO: Rename file
+class SettingsOptions(Enum):
+    """
+    Enum containing options for the Combo Boxes used in SettingsWindow.
+    """
+    fc_type = ["Accuri", "Cytoflex"]
+    model = glob.glob("./classifiers/*.h5")
+    autoencoder = glob.glob("./autoencoders/*.h5")
+    vis_type = ["UMAP", "Channels"]
+    vis_dims = ["2D", "3D"]
+    vis_channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
+                           "Width", "Time"]
+    vis_channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
+                             "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
+                             "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width",
+                             "Time"]
+    hardware = ["GPU", "CPU"]
+    lr = ["1e-6", "1e-5", "1e-4", "1e-3", "1e-2"]
+    lr_reduced = ["1e-3", "1e-2"]
+    lr_scheduler = ["Constant", "Time Decay", "Step Decay", "Exponential Decay"]
+    gating_type = ["Line", "Autoencoder", "Machine"]
+
+    @property
+    def get_value(self) -> list:
+        return iter(self.value)
 
 
 class Settings:
@@ -51,14 +76,19 @@ class Settings:
             for key, value in settings.items():
                 setattr(self, key, value)
 
-    def save_settings(self) -> None:
+    def save_settings(self, command_line: bool = False) -> None:
         """
         Save settings by rewriting configuration file.
         Returns:
             None
         """
         with open(".configs/config.yml", "w") as config:
-            yaml.dump(self.attributes, config)
+            if command_line:
+                attributes = vars(self)
+                attributes.pop("attributes")
+                yaml.dump(attributes, config)
+            else:
+                yaml.dump(self.attributes, config)
 
     def get_attributes(self) -> dict:
         """
