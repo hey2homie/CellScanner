@@ -2,7 +2,7 @@ import ast
 import yaml
 import inspect
 import os
-import glob
+from glob import glob
 from enum import Enum
 
 
@@ -11,8 +11,8 @@ class SettingsOptions(Enum):
     Enum containing options for the Combo Boxes used in SettingsWindow.
     """
     fc_type = ["Accuri", "Cytoflex"]
-    model = glob.glob("./classifiers/*.h5")
-    autoencoder = glob.glob("./autoencoders/*.h5")
+    model = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
+    autoencoder = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
     vis_type = ["UMAP", "Channels"]
     vis_dims = ["2D", "3D"]
     vis_channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
@@ -153,12 +153,12 @@ class ModelsInfo:
         """
         self.autoencoder_name = name
 
-    def get_features(self) -> list:
+    def get_features_shape_ae(self) -> list:
         """
         Returns:
             features (list): a list of features.
         """
-        return self.classifiers[self.classifier_name]["features"]
+        return self.autoencoders[self.autoencoder_name][2]["num_features"]
 
     def set_classifier(self, name: str) -> None:
         """
@@ -175,7 +175,7 @@ class ModelsInfo:
         """
         return self.classifiers[self.classifier_name][0]["labels_map"]
 
-    def get_features_shape(self) -> tuple:
+    def get_features_shape_classifier(self) -> tuple:
         """
         Returns:
             features_shape (tuple): a tuple of the shape of the features.
@@ -189,7 +189,7 @@ class ModelsInfo:
         """
         return ast.literal_eval(self.classifiers[self.classifier_name][2]["labels_shape"])
 
-    def add_model(self, name: str, labels_map: dict, features_shape: tuple, labels_shape: tuple) -> None:
+    def add_classifier(self, name: str, labels_map: dict, features_shape: tuple, labels_shape: tuple) -> None:
         """
         Adds information about new model to the classifiers class attributes, which is later being saved to the
         configuration files, and saves models information to configuration file.
@@ -205,6 +205,9 @@ class ModelsInfo:
         labels_map = {key: str(value) for key, value in labels_map.items()}
         self.classifiers[name] = [{"labels_map": labels_map}, {"features_shape": str(features_shape)},
                                   {"labels_shape": str(labels_shape)}]
+
+    def add_autoencoder(self, name: str, fc_type: str, features: list, num_features: int) -> None:
+        self.autoencoders[name] = [{"fc_type": fc_type}, {"features": features}, {"num_features": num_features}]
 
     def save_info(self) -> None:
         """

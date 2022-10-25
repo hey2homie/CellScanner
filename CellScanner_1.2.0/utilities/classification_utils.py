@@ -11,6 +11,8 @@ from keras.optimizers import Adam
 from keras.losses import SparseCategoricalCrossentropy
 from keras.activations import elu
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
 
 from utilities.data_preparation import FilePreparation, DataPreparation
 from utilities.visualizations import UmapVisualization, MplVisualization
@@ -142,7 +144,7 @@ class ClassificationTraining:
         file_prep = FilePreparation(files=self.files, settings=self.settings, models_info=self.models_info)
         dataframe = file_prep.get_aggregated()
         labels = file_prep.get_labels()
-        labels_shape = file_prep.get_labels_shape()
+        labels_shape = np.unique(labels).shape[0]
         data_preparation = DataPreparation(dataframe=dataframe, labels=labels, batch_size=self.settings.num_batches)
         training_set, test_set = data_preparation.create_datasets()
         labels_map = data_preparation.get_labels_map()
@@ -166,8 +168,8 @@ class ClassificationTraining:
         Returns:
             None
         """
-        self.models_info.add_model(self.model_name, labels_map=labels_map, features_shape=features_shape,
-                                   labels_shape=labels_shape)
+        self.models_info.add_classifier(self.model_name, labels_map=labels_map, features_shape=features_shape,
+                                        labels_shape=labels_shape)
         self.models_info.save_info()
 
     def run_training(self) -> None:
@@ -237,7 +239,7 @@ class ClassificationResults:
         self.settings = settings
         self.diagnostics = diagnostics
         set_tf_hardware(settings.hardware)  # TODO: Consider calling this function at the start of the application
-        self.model = ClassificationModel(num_features=models_info.get_features_shape(),
+        self.model = ClassificationModel(num_features=models_info.get_features_shape_classifier(),
                                          num_classes=models_info.get_labels_shape(),
                                          fc_type=self.settings.fc_type,
                                          lr=self.settings.lr)
@@ -346,10 +348,11 @@ class ToolDiagnosticsCalculations:
 
 class AutoEncoder:
 
-    def __init__(self, settings: Settings) -> None:
-        self.feature_shape = 13     # TODO: Load from models_info
-        self.autoencoder_name = "./autoencoders/" + settings.autoencoder
-        self.model = self.__compile_model()
+    def __init__(self, settings: Settings, models_info: ModelsInfo) -> None:
+        self.models_info = models_info
+        self.feature_shape = None
+        self.autoencoder_name = settings.autoencoder
+        self.settings = settings
 
     def __build_model(self) -> Model:
         encoder = Sequential([
@@ -384,7 +387,73 @@ class AutoEncoder:
         model.compile(loss="mse", optimizer=Adam(lr=1e-3))
         return model
 
+    def retrain(self, dataframe: np.ndarray, labels: np.ndarray, name: str, columns: list = None) -> None:
+        # TODO: Add method to data preparation to return columns names for them
+        gms_per_k = [GaussianMixture(n_components=k, n_init=10, random_state=42).fit(dataframe) for k in range(1, 11)]
+        aics = np.log10(np.abs(np.array([model.aic(dataframe) for model in gms_per_k])))
+        delta_aics = np.diff(aics)
+        optimal_k = np.argmax(delta_aics < 0.005) + 1    # TODO: Make this (0.005) hyperparameter adn store in settings
+        # TODO: Alright, raising warning window with scores (better with elbow plot) is better
+        kmeans = KMeans(n_clusters=optimal_k)
+        y_predicted = kmeans.fit_predict(dataframe)
+        clusters_content_labels = {}
+        clusters_content = {}
+        for i in np.unique(y_predicted):
+            clusters_content_labels[i] = np.take(labels, np.where(y_predicted == i))
+            clusters_content[i] = np.take(dataframe, np.where(y_predicted == i))
+        clusters_blank_count = {}
+        for key, value in clusters_content_labels.items():
+            types, counts = np.unique(value, return_counts=True)
+            count_blank = np.take(counts, np.where(types == "Blank")).sum()
+            count_rest = np.take(counts, np.where(types != "Blank")).sum()
+            counts_blank_perc = np.round(count_blank / (count_blank + count_rest) * 100, 2)
+            counts_rest_perc = np.round(count_rest / (count_blank + count_rest) * 100, 2)
+            clusters_blank_count[key] = {"count_blank %": counts_blank_perc, "count_rest% ": counts_rest_perc,
+                                         "count_blank": count_blank, "count_rest": count_rest}
+        indexes = []
+        for key, value in clusters_blank_count.items():
+            if clusters_blank_count[key]["count_blank %"] > 10:  # TODO: Make this a hyperparameter
+                indexes.extend(np.where(y_predicted == key)[0].tolist())
+        all_blanks = dataframe[indexes]
+        dataframe = np.delete(dataframe, indexes, axis=0)
+        y_predicted = np.delete(y_predicted, indexes, axis=0)
+        remaining_clusters = np.unique(y_predicted)
+        gm_per_cluster = [
+            GaussianMixture(n_components=1, n_init=10, random_state=42).fit(dataframe[np.where(y_predicted == k)])
+            for k in remaining_clusters]
+        data_clustered = {}
+        for i in remaining_clusters:
+            data_clustered[i] = np.take(dataframe, np.where(y_predicted == i), axis=0)[0]
+        anomalies_per_cluster = {}
+        data_clustered_clean = {}
+        count = 0
+        for i in remaining_clusters:
+            densities = gm_per_cluster[count].score_samples(data_clustered[i])
+            density_threshold = np.percentile(densities, 4)
+            data_clustered_clean[i] = data_clustered[i][densities > density_threshold]
+            anomalies_per_cluster[i] = data_clustered[i][densities < density_threshold]
+            all_blanks = np.append(all_blanks, anomalies_per_cluster[i], axis=0)
+            count += 1
+        firs_key = list(data_clustered_clean.keys())[0]
+        data_clean = data_clustered_clean[firs_key]
+        for key, values in data_clustered_clean.items():
+            if key != firs_key:
+                data_clean = np.append(data_clean, values, axis=0)
+        # TODO: I probably don't need all the code above... soo, come back to it later
+        np.save(f"autoencoders/.clean_data/{name}_clean", data_clean)
+        data_preparation = DataPreparation(dataframe=data_clean, batch_size=256)
+        training_set, test_set = data_preparation.create_datasets()
+        self.feature_shape = data_clean.shape[1]
+        model = self.__compile_model()
+        checkpoint_cb = ModelCheckpoint("./autoencoders/" + name, save_best_only=True)
+        model.fit(training_set, validation_data=test_set, epochs=50, callbacks=[checkpoint_cb])
+        self.models_info.add_autoencoder(name=name, fc_type=self.settings.fc_type, features=columns,
+                                         num_features=self.feature_shape)
+        self.models_info.save_info()
+
     def get_model(self) -> Model:
-        if os.path.exists(self.autoencoder_name):
-            self.model.load_weights(self.autoencoder_name)
-            return self.model
+        self.feature_shape = self.models_info.get_features_shape_ae()
+        model = self.__compile_model()
+        if os.path.exists("./autoencoders/" + self.autoencoder_name):
+            model.load_weights("./autoencoders/" + self.autoencoder_name)
+            return model

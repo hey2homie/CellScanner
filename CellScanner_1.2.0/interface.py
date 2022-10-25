@@ -1,22 +1,24 @@
 import argparse
 import os
+import yaml
 
 from utilities.settings import Settings, SettingsOptions, ModelsInfo
-from utilities.classification_utils import ClassificationResults, ClassificationTraining
+from utilities.classification_utils import ClassificationResults, ClassificationTraining, AutoEncoder
+from utilities.data_preparation import FilePreparation
 
 
 def run_prediction():
     if arguments.path is None or check_path(arguments.path) is None:
         raise argparse.ArgumentTypeError("Incorrect path or empty directory")
-    files = os.listdir(arguments.path)
-    if arguments.command == "prediction":
+    files = [os.path.join(arguments.path, file) for file in os.listdir(arguments.path)]
+    if arguments.command == "predict":
         ClassificationResults(files=files, settings=settings, models_info=models_info)
         pass
-    elif arguments.command == "diagnostics":
+    elif arguments.command == "validate":
         classifier = ClassificationResults(files=files, settings=settings, models_info=models_info, diagnostics=True)
         classifier.run_diagnostics()
         pass
-    else:
+    elif arguments.command == "train":
         if arguments.name:
             model_name = arguments.name[0]
         else:
@@ -29,21 +31,28 @@ def run_prediction():
         else:
             while True:
                 training_type = input("Enter model type: ")
-                if training_type in ["Autoencoder", "Classifier"]:
+                if training_type in ["autoencoder", "classifier"]:
                     break
         if model_name and training_type:
-            # TODO: Implement choice of training type
-            # training = ClassificationTraining(training_type=training_type,files=files, model_name=model_name,
-            #                                  settings=settings, models_info=models_info)
-            # training.run_training()
-            pass
+            if training_type == "classifier":
+                training = ClassificationTraining(files=files, model_name=model_name, settings=settings,
+                                                  models_info=models_info)
+                training.run_training()
+            else:
+                # TODO: Add the whole file_preparation step to the abstract training class (refactoring)
+                file_prep = FilePreparation(files=files, settings=settings, models_info=models_info, training=True)
+                dataframe = file_prep.get_aggregated()
+                labels = file_prep.get_labels()
+                features = file_prep.get_features()
+                autoencoder = AutoEncoder(settings=settings, models_info=models_info)
+                autoencoder.retrain(dataframe=dataframe, labels=labels, name=model_name, columns=features)
         else:
             raise argparse.ArgumentTypeError("No arguments provided")
 
 
 def run_settings():
     if arguments.show:
-        print(settings.attributes)  # TODO: Nicely format the output
+        print(yaml.dump(settings.attributes, default_flow_style=False))
     elif arguments.change:
         try:
             available_values = getattr(SettingsOptions, arguments.change[0]).value
@@ -80,7 +89,7 @@ def main():
     parser = argparse.ArgumentParser(description="CellScanner")
 
     parser.add_argument("command", type=str, help="Command to run",
-                        choices=["prediction", "training", "settings", "diagnostics"])
+                        choices=["predict", "train", "validate", "settings"])
 
     # General
     parser.add_argument("-p", "--path", type=str, help="Path to files to process")
@@ -101,7 +110,7 @@ def main():
     global arguments
     arguments = parser.parse_args()
 
-    if arguments.command == "prediction" or arguments.command == "training" or arguments.command == "diagnostics":
+    if arguments.command == "predict" or arguments.command == "train" or arguments.command == "diagnose":
         run_prediction()
     elif arguments.command == "settings":
         run_settings()

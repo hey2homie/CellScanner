@@ -15,7 +15,7 @@ class FilePreparation:
     initializing class and later calling get_aggregated() method or processed individually with the get_data() method.
     """
 
-    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo) -> None:
+    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo, training: bool = False) -> None:
         """
         Args:
             files (list): List of strings containing absolute path to the desired files.
@@ -32,6 +32,8 @@ class FilePreparation:
         self.data = None
         self.aggregated = None
         self.labels = []
+        self.features = {}
+        self.training = training
 
     def __check_extension(self):
         # TODO: Consider showing warning message
@@ -53,7 +55,7 @@ class FilePreparation:
         """
         meta, self.data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
 
-    def __drop_columns(self) -> None:
+    def __drop_columns(self, file: str) -> None:
         # TODO: Add extra columns from config
         # TODO: Drop columns according to the autoencoder features
         """
@@ -63,6 +65,7 @@ class FilePreparation:
         """
         try:
             self.data.drop(self.cols_drop, axis=1, inplace=True)
+            self.features[file] = list(self.data.columns)
         except KeyError:
             pass    # TODO: Em, raise issue?
 
@@ -104,13 +107,14 @@ class FilePreparation:
                         self.data.drop(index)
         elif self.gating_type == "Autoencoder":
             from utilities.classification_utils import AutoEncoder
-            autoencoder = AutoEncoder(settings=self.settings)
+            autoencoder = AutoEncoder(settings=self.settings, models_info=self.models_info)
             autoencoder = autoencoder.get_model()
             predicted = autoencoder.predict(self.data)
             mse = np.log10(np.mean(np.power(self.data - predicted, 2), axis=1))
+            # TODO: Better raise window with plot to allow user to choose the threshold from visual aid
             self.data = self.data[mse < self.mse_threshold]
         else:
-            pass    # TODO: Implementation of method from the previous version
+            raise NotImplementedError   # TODO: Implementation of method from the previous version
 
     def __add_labels(self, file: str) -> None:
         """
@@ -136,10 +140,11 @@ class FilePreparation:
         Returns:
             None
         """
-        self.__convert(file)
-        self.__drop_columns()
+        self.__convert(file=file)
+        self.__drop_columns(file=file)
         self.__scale()
-        self.__gate()
+        if not self.training:
+            self.__gate()
 
     def __aggregate(self) -> None:
         """
@@ -180,12 +185,17 @@ class FilePreparation:
         """
         return np.array(self.labels)
 
-    def get_labels_shape(self) -> tuple:
+    def get_features(self) -> list:
         """
         Returns:
-            tuple: Tuple containing value of unique labels.
+            dict: Returns dictionary containing features for each file.
         """
-        return np.array(list(set(self.labels))).shape
+        unique = [list(x) for x in set(tuple(x) for x in self.features.values())]
+        if len(unique) == 1:
+            return unique[0]
+        else:
+            raise ValueError("Files are from different FCs")
+            # TODO: Raise issues because files are coming from different sources
 
 
 class DataPreparation:
