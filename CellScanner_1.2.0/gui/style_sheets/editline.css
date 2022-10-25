@@ -1,5 +1,9 @@
 QLineEdit {
     /* TODO: Add slightly different text color */
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
     font-size: 16px;
     text-align: left;
+    font-family: Avenir, system-ui;
 }

@@ -293,7 +293,7 @@ class ClassificationResults:
             array contains data/UMAP embeddings and predicted labels.
         """
         # TODO: Write outputs to the folder specified in settings.results
-        return self.outputs
+        return self.run_diagnostics() if self.diagnostics else self.outputs
 
     def run_diagnostics(self) -> dict:
         """
@@ -405,16 +405,12 @@ class AutoEncoder:
         for key, value in clusters_content_labels.items():
             types, counts = np.unique(value, return_counts=True)
             count_blank = np.take(counts, np.where(types == "Blank")).sum()
-            count_rest = np.take(counts, np.where(types != "Blank")).sum()
-            counts_blank_perc = np.round(count_blank / (count_blank + count_rest) * 100, 2)
-            counts_rest_perc = np.round(count_rest / (count_blank + count_rest) * 100, 2)
-            clusters_blank_count[key] = {"count_blank %": counts_blank_perc, "count_rest% ": counts_rest_perc,
-                                         "count_blank": count_blank, "count_rest": count_rest}
+            counts_blank_perc = np.round(count_blank / counts * 100, 2)
+            clusters_blank_count[key] = {"count_blank %": counts_blank_perc}
         indexes = []
         for key, value in clusters_blank_count.items():
             if clusters_blank_count[key]["count_blank %"] > 10:  # TODO: Make this a hyperparameter
                 indexes.extend(np.where(y_predicted == key)[0].tolist())
-        all_blanks = dataframe[indexes]
         dataframe = np.delete(dataframe, indexes, axis=0)
         y_predicted = np.delete(y_predicted, indexes, axis=0)
         remaining_clusters = np.unique(y_predicted)
@@ -432,7 +428,6 @@ class AutoEncoder:
             density_threshold = np.percentile(densities, 4)
             data_clustered_clean[i] = data_clustered[i][densities > density_threshold]
             anomalies_per_cluster[i] = data_clustered[i][densities < density_threshold]
-            all_blanks = np.append(all_blanks, anomalies_per_cluster[i], axis=0)
             count += 1
         firs_key = list(data_clustered_clean.keys())[0]
         data_clean = data_clustered_clean[firs_key]

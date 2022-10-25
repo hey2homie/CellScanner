@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any
 
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
-    QFrame, QComboBox, QLineEdit, QTextEdit
+    QFrame, QComboBox, QLineEdit, QTextEdit, QCheckBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter
 
@@ -23,6 +23,8 @@ class Styles(Enum):
     ComboBox = "gui/style_sheets/combobox.css"
     DropArea = "gui/style_sheets/lists.css"
     Markdown = "gui/style_sheets/markdown.css"
+    CheckBox = "gui/style_sheets/markdown.css"
+    MessageBox = "gui/style_sheets/messagebox.css"
 
 
 class Widget(QWidget):
@@ -51,7 +53,7 @@ class Widget(QWidget):
         if name:
             self.name = name
 
-    def set_geometry(self, geometry: list, ) -> None:
+    def set_geometry(self, geometry: list) -> None:
         """
         Sets geometry of the widget.
         Args:
@@ -86,6 +88,12 @@ class Label(QLabel, Widget):
             **kwargs:
         """
         super(Label, self).__init__(widget=Styles.Label, *args, **kwargs)
+
+
+class MessageBox(QMessageBox, Widget):
+
+    def __init__(self, *args, **kwargs):
+        super(MessageBox, self).__init__(widget=Styles.MessageBox, *args, **kwargs)
 
 
 class HLine(QFrame, Widget):
@@ -168,11 +176,8 @@ class Button(QPushButton, Widget):
             Args:
                 stack (QStackedWidget): Stack of widgets.
             """
+            stack.widget(1).set_action(self.text())
             stack.setCurrentIndex(1)
-            if self.text() == "Tool\nDiagnostics":
-                stack.widget(1).children()[3].setText("Diagnostics")
-            else:
-                stack.widget(1).children()[3].setText("Next")
 
         def clear(stack: QStackedWidget) -> None:
             """
@@ -180,37 +185,12 @@ class Button(QPushButton, Widget):
             Args:
                 stack (QStackedWidget): Stack of widgets.
             """
-            if stack.currentIndex() != 3:
-                stack.widget(1).children()[0].clear()
-                stack.widget(2).children()[1].clear()
-                stack.widget(4).children()[1].clear()
-            stack.setCurrentIndex(0)
-
-        def show_results(stack: QStackedWidget) -> None:
-            """
-            Runs classification or diagnostics on provided files and displays results.
-            Args:
-                stack (QStackedWidget): stack of widgets.
-            """
-            if stack.widget(1).children()[0].count() != 0:
-                files = stack.widget(1).children()[0].get_files()
-                settings = stack.widget(0).get_settings()
-                model_settings = stack.widget(0).get_models_info()
-                model_settings.classifier_name = settings.model
-                model_settings.autoencoder_name = settings.autoencoder
-                # There is super weird bug that elif below works with original button's text
-                if self.text() == "Diagnostics":
-                    classifier = ClassificationResults(files=files, settings=settings, models_info=model_settings,
-                                                       diagnostics=True)
-                    outputs = classifier.run_diagnostics()
-                else:
-                    classifier = ClassificationResults(files=files, settings=settings, models_info=model_settings)
-                    outputs = classifier.get_outputs()
-                    stack.widget(2).set_items(files)
-                stack.widget(2).set_inputs(outputs)
-                stack.setCurrentIndex(2)
-            else:
-                QMessageBox.about(self, "Warning", "Files are not selected")
+            for i in range(stack.count()):
+                for widget in stack.widget(i).children():
+                    if isinstance(widget, EditLine) or isinstance(widget, DropBox):
+                        widget.clear()
+            if self.text() == "Menu":
+                stack.setCurrentIndex(0)
 
         def set_output_directory(stack: QStackedWidget) -> None:
             """
@@ -222,6 +202,7 @@ class Button(QPushButton, Widget):
             directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
             if directory:
                 stack.widget(3).children()[0].children()[0].children()[6].setText(directory)    # Meh, ugly.
+            # TODO: If removing class attributes, I need to change attribute of settings class
             settings = stack.widget(3)
             settings.results = directory
 
@@ -236,29 +217,35 @@ class Button(QPushButton, Widget):
 
         windows = get_top_level_parent(self)
 
-        if self.text() == "Prediction" or self.text() == "Tool\nDiagnostics":
+        # Main Menu
+        if self.text() == "Prediction" or self.text() == "Tool\nDiagnostics" or self.text() == "Training":
             self.clicked.connect(lambda: show_file_selection_window(windows))
-        elif self.text() == "Training":
-            self.clicked.connect(lambda: windows.setCurrentIndex(4))
         elif self.text() == "Settings":
             self.clicked.connect(lambda: windows.setCurrentIndex(3))
         elif self.text() == "Help":
-            self.clicked.connect(lambda: windows.setCurrentIndex(5))
-        elif self.text() == "Menu":
+            self.clicked.connect(lambda: windows.setCurrentIndex(4))
+
+        # File Selection
+        elif self.text() == "Menu" or self.text() == "Clear Data":
             self.clicked.connect(lambda: clear(windows))
-        elif self.text() == "Clear Data":
-            self.clicked.connect(lambda: windows.widget(1).children()[0].clear() if windows.currentIndex() == 1 else
-                                 windows.widget(4).children()[1].clear())
-        elif self.text() == "Next":
-            self.clicked.connect(lambda: show_results(windows))
+        if self.text() == "Predict" or self.text() == "Diagnose" or self.text() == "Train":
+            self.clicked.connect(lambda: windows.widget(1).run_action())
+
+        # Settings
         elif self.text() == "Apply":
             self.clicked.connect(lambda: windows.widget(3).update_config())
-        elif self.text() == "Train":
-            self.clicked.connect(lambda: windows.widget(4).begin_training())
         elif self.text() == "...":
             self.clicked.connect(lambda: set_output_directory(windows))
+
+        # Results
         elif self.text() == "Save Visuals":
             self.clicked.connect(lambda: save_visuals(windows))
+
+
+class CheckBox(QCheckBox, Widget):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super(CheckBox, self).__init__(widget=Styles.CheckBox, *args, **kwargs)
 
 
 class ComboBox(QComboBox, Widget):

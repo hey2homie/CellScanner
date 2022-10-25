@@ -7,7 +7,6 @@ from gui.start_window import MainWindow
 from gui.file_selection import FileSelector
 from gui.results import ResultsWindow
 from gui.settings import SettingsWindow
-from gui.training import TrainingWindow
 from gui.about import AboutWindow
 
 
@@ -17,7 +16,6 @@ def main():
     FileSelector(stack=start.get_stack())
     ResultsWindow(stack=start.get_stack(), settings=start.get_settings())
     SettingsWindow(stack=start.get_stack(), settings=start.get_settings())
-    TrainingWindow(stack=start.get_stack(), settings=start.get_settings())
     AboutWindow(stack=start.get_stack())
     sys.exit(app.exec())
 
