@@ -14,7 +14,7 @@ class SettingsOptions(Enum):
     model = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
     autoencoder = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
     vis_type = ["UMAP", "Channels"]
-    vis_dims = ["2D", "3D"]
+    vis_dims = ["2", "3"]
     vis_channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
                            "Width", "Time"]
     vis_channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
@@ -23,13 +23,12 @@ class SettingsOptions(Enum):
                              "Time"]
     hardware = ["GPU", "CPU"]
     lr = ["1e-6", "1e-5", "1e-4", "1e-3", "1e-2"]
-    lr_reduced = ["1e-3", "1e-2"]
     lr_scheduler = ["Constant", "Time Decay", "Step Decay", "Exponential Decay"]
     gating_type = ["Line", "Autoencoder", "Machine"]
 
-    @property
-    def get_value(self) -> list:
-        return iter(self.value)
+    @classmethod
+    def get_dictionary(cls) -> dict:
+        return {key.name: key.value for key in cls}
 
 
 class Settings:
@@ -37,25 +36,19 @@ class Settings:
     Attributes of this class are used throughout the project to determine settings for various operations. Values of
     attributes can be modified either in the setting window or manually by changing entries in the configuration file.
     """
-    # TODO: Add docstrings
-    # TODO: Consider using slots for the class attributes
-    # TODO: Add attribute for autoencoder model
     fc_type = None
-    model = None
+    hardware = None
     results = None
     vis_type = None
     vis_dims = None
     vis_channels_accuri = None
     vis_channels_cytoflex = None
     num_umap_cores = None
-    hardware = None
-    lr = None
-    lr_scheduler = None
-    lr_reduced = None
+    model = None
     num_batches = None
     num_epochs = None
-    cols_to_drop_accuri = None
-    cols_to_drop_cytoflex = None
+    lr_scheduler = None
+    lr = None
     gating_type = None
     autoencoder = None
     mse_threshold = None

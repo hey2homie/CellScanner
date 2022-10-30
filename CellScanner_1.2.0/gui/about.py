@@ -1,21 +1,17 @@
-from PyQt6.QtWidgets import QWidget, QStackedWidget
 from PyQt6.QtCore import Qt
 
-from gui.widgets import Label, TextEdit, Button
+from gui.widgets import Widget, Label, TextEdit, Button
 
 
-class AboutWindow(QWidget):
+class AboutWindow(Widget):
 
-    def __init__(self, stack: QStackedWidget, *args, **kwargs):
-        super(AboutWindow, self).__init__(*args, **kwargs)
-        self.stack = stack
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.__init_ui()
 
     def __init_ui(self) -> None:
         self.setWindowTitle("About")
-        self.setGeometry(self.stack.currentWidget().geometry())
         self.__init_widget()
-        self.stack.addWidget(self)
 
     def __init_widget(self) -> None:
         tittle = Label(text="About CellScanner", obj_name="tittle", geometry=[0, 9, 895, 69], parent=self)

@@ -1,0 +1,106 @@
+QWidget {
+    font-family: Avenir, system-ui;
+    color: #d7cece;
+    background-color: #323232;
+}
+
+QLabel#tittle {
+    font-size: 45px;
+}
+
+QLabel#version {
+    font-size: 18px;
+}
+
+QLabel#settings {
+    font-size: 24px;
+}
+
+QLabel#small {
+    font-size: 16px;
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+}
+
+QPushButton {
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    background-color: #4e4d4d;
+}
+
+QPushButton:hover{
+    background-color: #605f5f;
+}
+
+QPushButton#main {
+    font-size: 28px;
+}
+
+QPushButton#standard {
+    font-size: 24px;
+}
+
+QPushButton#settings {
+    font-size: 16px;
+}
+
+QLineEdit {
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    background-color: #4e4d4d;
+    font-size: 16px;
+    text-align: center;
+}
+
+QLineEdit:hover{
+    background-color: #605f5f;
+}
+
+QMessageBox {   /* TODO: Seems something is off */
+    font-size: 16px; /* TODO: Maybe different size */
+}
+
+QListWidget {
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    background-color: #4e4d4d;
+}
+
+QListWidget#drop {
+    font-size: 32px;
+}
+
+QListWidget#added {
+    font-size: 16px;
+}
+
+QListWidget#select {
+    font-size: 12px;
+}
+
+QGridLayout {
+    border-style: solid;
+    border-color: black;
+}
+
+QComboBox {
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    background-color: #4e4d4d;
+    text-align: left;
+    font-size: 16px;
+}
+
+QCheckBox {
+    font-size: 16px;
+    /* background-color: #4e4d4d; */
+}
+
+QTextEdit {
+    /* TODO: Markdown */
+}

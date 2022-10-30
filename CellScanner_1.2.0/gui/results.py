@@ -1,5 +1,5 @@
 from PyQt6 import QtWebEngineWidgets
-from PyQt6.QtWidgets import QWidget, QStackedWidget, QGridLayout
+from PyQt6.QtWidgets import QGridLayout
 
 import plotly.express as px
 import numpy as np
@@ -8,14 +8,13 @@ import pandas as pd
 from utilities.settings import Settings
 from utilities.visualizations import MplVisualization
 
-from gui.widgets import Widget, Button, Styles, FileBox
+from gui.widgets import Widget, Button, FileBox
 
 
-class ResultsWindow(QWidget):
+class ResultsWindow(Widget):
 
-    def __init__(self, stack: QStackedWidget, settings: Settings, *args, **kwargs) -> None:
+    def __init__(self, settings: Settings, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.stack = stack
         self.settings = settings
         self.inputs = None
         self.data = None
@@ -27,13 +26,11 @@ class ResultsWindow(QWidget):
 
     def __init_ui(self) -> None:
         self.setWindowTitle("Results")
-        self.setGeometry(self.stack.currentWidget().geometry())
         self.__init_widgets()
         self.__configurate_widgets()
-        self.stack.addWidget(self)
 
     def __init_widgets(self) -> None:
-        self.widget_graph = Widget(widget=Styles.Widget, obj_name="", geometry=[273, 43, 581, 450], parent=self)
+        self.widget_graph = Widget(obj_name="", geometry=[273, 43, 581, 450], parent=self)
         self.layout_graph = QGridLayout(parent=self.widget_graph)
         self.layout_graph.addWidget(self.browser)
         self.file_box = FileBox(obj_name="select", geometry=[47, 43, 200, 450], parent=self)
@@ -71,7 +68,7 @@ class ResultsWindow(QWidget):
             self.file_box.hide()
             self.children()[3].hide()
             self.children()[4].hide()
-            self.widget_graph.set_geometry([46, 43, 808, 450])
+            self.widget_graph.setGeometry(*[46, 43, 808, 450])
             pass
         if inputs:
             self.inputs = inputs

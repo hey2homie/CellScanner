@@ -8,15 +8,20 @@ from gui.file_selection import FileSelector
 from gui.results import ResultsWindow
 from gui.settings import SettingsWindow
 from gui.about import AboutWindow
+from gui.widgets import Stack
 
 
 def main():
+    # TODO: Global alignment of the labels that should be in the center
     app = QApplication(sys.argv)
-    start = MainWindow()
-    FileSelector(stack=start.get_stack())
-    ResultsWindow(stack=start.get_stack(), settings=start.get_settings())
-    SettingsWindow(stack=start.get_stack(), settings=start.get_settings())
-    AboutWindow(stack=start.get_stack())
+    stack = Stack()
+    start = MainWindow(stack=stack)
+    FileSelector(stack=stack)
+    ResultsWindow(stack=stack, settings=start.get_settings())
+    SettingsWindow(stack=stack, settings=start.get_settings())
+    AboutWindow(stack=stack)
+    stack.setCurrentIndex(0)
+    stack.show()
     sys.exit(app.exec())
 
 

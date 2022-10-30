@@ -1,23 +1,18 @@
-from PyQt6.QtWidgets import QWidget, QStackedWidget
-
 from utilities.classification_utils import ClassificationTraining, ClassificationResults, AutoEncoder
 from utilities.data_preparation import FilePreparation
 
-from gui.widgets import DropBox, Button, EditLine, CheckBox, MessageBox
+from gui.widgets import Widget, DropBox, Button, EditLine, CheckBox, MessageBox
 
 
-class FileSelector(QWidget):
+class FileSelector(Widget):
 
-    def __init__(self, stack: QStackedWidget, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.stack = stack
-        self.stack.addWidget(self)
         self.title = "Choose Files"
         self.action = False
 
     def __init_ui(self):
         self.setWindowTitle(self.title)
-        self.setGeometry(self.stack.currentWidget().geometry())
         DropBox(obj_name="drop", geometry=[46, 43, 808, 450], parent=self)
         Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
         Button(text="Clear Data", obj_name="standard", geometry=[349, 518, 200, 60], parent=self)
@@ -25,9 +20,9 @@ class FileSelector(QWidget):
         if self.action == "Tool\nDiagnostics":
             self.children()[3].setText("Diagnose")
         elif self.action == "Training":
-            model_name = EditLine(obj_name="input", geometry=[46, 43, 688, 30], parent=self)
+            model_name = EditLine(obj_name="input", geometry=[46, 43, 638, 30], parent=self)
             model_name.setPlaceholderText("Enter model name")
-            CheckBox(text="Autoencoder", obj_name="use_ae", geometry=[750, 43, 100, 30], parent=self)
+            CheckBox(text="Autoencoder", obj_name="use_ae", geometry=[703, 43, 150, 30], parent=self)
             self.children()[0].setGeometry(46, 93, 808, 400)
             self.children()[3].setText("Train")
 
