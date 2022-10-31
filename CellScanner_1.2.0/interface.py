@@ -3,8 +3,7 @@ import os
 import yaml
 
 from utilities.settings import Settings, SettingsOptions, ModelsInfo
-from utilities.classification_utils import ClassificationResults, ClassificationTraining, AutoEncoder
-from utilities.data_preparation import FilePreparation
+from utilities.classification_utils import ClassificationModel, AutoEncoder
 
 
 def run_prediction():
@@ -12,12 +11,11 @@ def run_prediction():
         raise argparse.ArgumentTypeError("Incorrect path or empty directory")
     files = [os.path.join(arguments.path, file) for file in os.listdir(arguments.path)]
     if arguments.command == "predict":
-        ClassificationResults(files=files, settings=settings, models_info=models_info)
-        pass
+        model = ClassificationModel(settings=settings, model_info=models_info, files=files)
+        model.run_classification()
     elif arguments.command == "validate":
-        classifier = ClassificationResults(files=files, settings=settings, models_info=models_info, diagnostics=True)
-        classifier.run_diagnostics()
-        pass
+        model = ClassificationModel(settings=settings, model_info=models_info, files=files)
+        model.run_diagnostics()
     elif arguments.command == "train":
         if arguments.name:
             model_name = arguments.name[0]
@@ -35,24 +33,18 @@ def run_prediction():
                     break
         if model_name and training_type:
             if training_type == "classifier":
-                training = ClassificationTraining(files=files, model_name=model_name, settings=settings,
-                                                  models_info=models_info)
-                training.run_training()
+                model = ClassificationModel(settings=settings, model_info=models_info, files=files)
+                model.run_training(name=model_name)
             else:
-                # TODO: Add the whole file_preparation step to the abstract training class (refactoring)
-                file_prep = FilePreparation(files=files, settings=settings, models_info=models_info, training=True)
-                dataframe = file_prep.get_aggregated()
-                labels = file_prep.get_labels()
-                features = file_prep.get_features()
-                autoencoder = AutoEncoder(settings=settings, models_info=models_info)
-                autoencoder.retrain(dataframe=dataframe, labels=labels, name=model_name, columns=features)
+                autoencoder = AutoEncoder(settings=settings, model_info=models_info, files=files)
+                autoencoder.run_training(name=model_name)
         else:
             raise argparse.ArgumentTypeError("No arguments provided")
 
 
 def run_settings():
     if arguments.show:
-        print(yaml.dump(settings.attributes, default_flow_style=False))
+        print(yaml.dump(vars(settings), default_flow_style=False))
     elif arguments.change:
         try:
             available_values = getattr(SettingsOptions, arguments.change[0]).value
@@ -63,7 +55,7 @@ def run_settings():
                     break
                 else:
                     print("Invalid option")
-        except AttributeError:  # If attribute is not in SettingsOptions
+        except AttributeError:
             while True:
                 value = input(f"Enter new value for {arguments.change[0]}: ")
                 if value:
