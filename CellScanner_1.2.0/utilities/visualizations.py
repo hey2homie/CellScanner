@@ -17,64 +17,33 @@ from utilities.settings import Settings
 
 
 class UmapVisualization:
-    """
-    UmapVisualization class is used to create UMAP embeddings of the dataframe that are used in low-dimensional
-    projection of the results as well as the part of the training dataset.
-    """
 
     def __init__(self, data: np.ndarray, num_cores: int, dims: int) -> None:
-        """
-        Args:
-            data (np.array): Dataframe to be reduced.
-            num_cores (int): Amount of CPU cores used for the computation of embeddings
-            dims (int): Dimension of the embeddings.
-        """
         self.data = data
         self.num_cores = num_cores
         self.dims = dims
         self.embeddings = self.__reduction()
 
     def __reduction(self) -> np.ndarray:
-        """
-        Performs dimensional Reduction to either 2D or 3D as specified in the settings.
-        Returns:
-            fitted (np.array): Calculated embeddings.
-        """
         reducer = umap.UMAP(n_components=self.dims, n_neighbors=25, min_dist=0.1, metric="euclidean",
                             n_jobs=self.num_cores)
         fitted = reducer.fit_transform(self.data)
         return fitted
 
     def get_embeddings(self) -> np.ndarray:
-        """
-        Returns:
-            embeddings (np.array): Calculated embeddings.
-        """
         return self.embeddings
 
 
 class MplVisualization:
-    """
-    MplVisualization class is used to create plots MatPlotLib plots of models accuracy performance and visualisations of
-    predictions.
-    """
 
     def __init__(self, output_path: str) -> None:
-        """
-        Args:
-            output_path (str): Path to the output directory.
-        Returns:
-            None
-        """
-        self.output_path = output_path
-        datestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        self.output_path = self.output_path + "/" + datestamp + "/"
-        # TODO: 10 colors should be enough, I guess
+        self.output_path = output_path + "/" + datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + "/"
+        os.mkdir(self.output_path)
+        # 10 colors should be enough, I guess
         self.colors = cycle(["aqua", "darkorange", "cornflowerblue", "goldenrod", "rosybrown", "lightgreen",
                              "lightgray", "orchid", "darkmagenta", "olive"])
         self.classes = None
         self.n_classes = None
-        os.mkdir(self.output_path)
 
     def save_predictions_visualizations(self, inputs: dict, settings: Settings) -> None:
         """
@@ -127,37 +96,22 @@ class MplVisualization:
             plt.savefig(self.output_path + file + "_" "predictions.png")
 
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
-        """
-        Runs calculations for the accuracy metrics.
-        Args:
-            true_labels (np.array): Array of true labels.
-            predicted_labels (np.array): Array of predicted labels.
-        Returns:
-            None
-        """
         self.classes = np.unique(true_labels)
         self.n_classes = self.classes.shape[0]
         true_labels_binarized = label_binarize(true_labels, classes=self.classes)
         predicted_labels_binarized = label_binarize(predicted_labels, classes=self.classes)
         self.classes = {i: bacteria_class for i, bacteria_class in enumerate(self.classes)}
+        # TODO: Bug when there is true labels are more than predicted labels and vice versa (see line 114)
         self.__roc(true_labels_binarized, predicted_labels_binarized)
         self.__precision_recall(true_labels_binarized, predicted_labels_binarized)
         self.__confusion_matrices(true_labels_binarized, predicted_labels_binarized)
         self.__aggregated_matrix(true_labels, predicted_labels)
 
     def __roc(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
-        """
-        Creates ROC curve for each class and saves it to the output directory.
-        Args:
-            true_labels (np.array): Array of true labels.
-            predicted_labels (np.array): Array of predicted labels.
-        Returns:
-            None
-        """
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
-        for i in range(self.n_classes):
+        for i in range(self.n_classes):     # HERE
             fpr[i], tpr[i], _ = roc_curve(true_labels[:, i], predicted_labels[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
         all_fpr = np.unique(np.concatenate([fpr[i] for i in range(self.n_classes)]))
@@ -182,14 +136,6 @@ class MplVisualization:
         plt.savefig(self.output_path + "/roc.png")
 
     def __precision_recall(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
-        """
-        Creates Precision-Recall curve for each class and saves it to the output directory.
-        Args:
-            true_labels (np.array): Array of true labels.
-            predicted_labels (np.array): Array of predicted labels.
-        Returns:
-            None
-        """
         precision = dict()
         recall = dict()
         average_precision = dict()
@@ -219,14 +165,6 @@ class MplVisualization:
         plt.savefig(self.output_path + "precision_recall.png")
 
     def __confusion_matrices(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
-        """
-        Creates confusion matrix for each class and saves it to the output directory.
-        Args:
-            true_labels (np.array): Array of true labels.
-            predicted_labels (np.array): Array of predicted labels.
-        Returns:
-            None
-        """
         rows = int(np.floor(np.sqrt(self.n_classes)))
         cols = int(np.ceil(self.n_classes / rows))
         fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
@@ -248,7 +186,6 @@ class MplVisualization:
         plt.savefig(self.output_path + "confusion_matrices.png")
 
     def __aggregated_matrix(self, true_labels: np.ndarray, predicted_labels: np.ndarray):
-        # TODO: Update requirements
         _, true_labels = np.unique(true_labels, return_inverse=True)
         _, predicted_labels = np.unique(predicted_labels, return_inverse=True)
         cm = confusion_matrix(y_target=true_labels, y_predicted=predicted_labels, binary=False)

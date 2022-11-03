@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
 from utilities.data_preparation import FilePreparation, DataPreparation
-from utilities.visualizations import MplVisualization
+from utilities.visualizations import MplVisualization, UmapVisualization
 from utilities.settings import Settings, ModelsInfo
 
 
@@ -29,14 +29,15 @@ def set_tf_hardware(hardware: str) -> None:
 
 class AppModels(ABC):
 
-    def __init__(self, settings: Settings, model_info: ModelsInfo, files: list, model_type: str = None):
+    def __init__(self, settings: Settings, model_info: ModelsInfo, model_type: str,  name: str = None,
+                 files: list = None, training: bool = False):
+        self.name = name
         self.settings = settings
         self.model_info = model_info
         self.model_type = model_type
         self.files = files
-        self.file_prep = self.__pre_process(files)
+        self.file_prep = self.__pre_process(files, training=training)
         self.model = None
-        self.__compile_mode()
 
     def __build_model(self) -> None:
         if self.model_type == "classifier":
@@ -87,18 +88,19 @@ class AppModels(ABC):
             ])
             self.model = Model(inputs=encoder.input, outputs=decoder(encoder.output))
 
-    def __compile_mode(self) -> None:
+    def compile_model(self) -> None:
         self.__build_model()
         if self.model_type == "classifier":
-            self.model.compile(optimizer=Adam(self.settings.lr), loss=SparseCategoricalCrossentropy(from_logits=True),
+            self.model.compile(optimizer=Adam(float(self.settings.lr)),
+                               loss=SparseCategoricalCrossentropy(from_logits=True),
                                metrics=["accuracy"])
         else:
             self.model.compile(optimizer=Adam(1e-3), loss="mse")
 
-    def __pre_process(self, files: list) -> FilePreparation:
-        return FilePreparation(files=files, settings=self.settings, models_info=self.model_info)
+    def __pre_process(self, files: list, training: bool = False) -> FilePreparation:
+        return FilePreparation(files=files, settings=self.settings, models_info=self.model_info, training=training)
 
-    def __create_training_files(self, dataframe: np.ndarray, labels: np.ndarray = None) -> tuple:
+    def create_training_files(self, dataframe: np.ndarray, labels: np.ndarray = None) -> tuple:
         data_preparation = DataPreparation(dataframe=dataframe, labels=labels, batch_size=self.settings.num_batches)
         training_set, test_set = data_preparation.create_datasets()
         if self.model_type == "classifier":
@@ -107,39 +109,39 @@ class AppModels(ABC):
         else:
             return training_set, test_set
 
-    def __train_model(self, name: str, training_set: tf.data.Dataset, test_set: tf.data.Dataset,
-                      scheduler: list = None) -> None:
-        folder = "/classifiers/" if self.model_type == "classifier" else "./autoencoders/"
+    def train_model(self, name: str, training_set: tf.data.Dataset, test_set: tf.data.Dataset,
+                    scheduler: list = None) -> None:
+        folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
         callbacks = [ModelCheckpoint(folder + name + ".h5", save_best_only=True)]
         if scheduler:
             callbacks.extend(scheduler)
         self.model.fit(training_set, validation_data=test_set, epochs=50, callbacks=callbacks)
 
     def get_model(self) -> Model:
-        weights = self.settings.model if self.model_type == "classifier" else self.settings.autoencoder
-        folder = "/classifiers/" if self.model_type == "classifier" else "./autoencoders/"
-        weights = folder + weights + ".h5"
-        if os.path.exists(weights):
-            self.model.load_weights()
+        folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
+        if self.model_type == "classifier":
+            self.model_info.classifier_name = self.name
+        else:
+            self.model_info.autoencoder_name = self.name
+        self.__build_model()
+        if os.path.exists(folder + self.name):
+            self.model.load_weights(folder + self.name)
             return self.model
         else:
             raise Exception("Weights file not found")
 
     @abstractmethod
-    def run_training(self, name: str):
+    def run_training(self):
         pass
 
 
 class ClassificationModel(AppModels):
 
-    def __init__(self, settings: Settings, model_info: ModelsInfo, files: list):
-        super().__init__(settings=settings, model_info=model_info, files=files)
-
-    def run_training(self, name: str) -> None:
+    def run_training(self) -> None:
         files, labels = self.file_prep.get_aggregated(), self.file_prep.get_labels()
-        training_set, test_set, labels_map = self.__create_training_files(files, labels)
+        training_set, test_set, labels_map = self.create_training_files(files, labels)
         num_features, num_classes = files.shape[1], np.unique(labels).shape[0]
-        self.model_info.add_classifier(name, labels_map, num_features, num_classes)
+        self.model_info.add_classifier(self.name, labels_map, num_features, num_classes)
         scheduler = None
         if self.settings.lr_scheduler == "Time Based Decay":
             scheduler = [LearningRateScheduler(self.__time_based_decay)]
@@ -147,10 +149,12 @@ class ClassificationModel(AppModels):
             scheduler = [LearningRateScheduler(self.__step_decay)]
         elif self.settings.lr_scheduler == "Exponential Decay":
             scheduler = [LearningRateScheduler(self.__exp_decay)]
-        self.__train_model(name, training_set, test_set, scheduler=scheduler)
+        self.compile_model()
+        self.train_model(self.name, training_set, test_set, scheduler=scheduler)
         self.model_info.save_info()
 
     def __make_predictions(self, file: str = None, diagnostics: bool = False) -> np.ndarray:
+        self.get_model()
         labels_map = self.model_info.get_labels_map()
         labels = []
         if diagnostics:
@@ -158,15 +162,23 @@ class ClassificationModel(AppModels):
         else:
             data = self.file_prep.get_data(file)
         predictions = self.model.predict(data)
+        embeddings = None
+        if self.settings.vis_type == "UMAP":
+            umap = UmapVisualization(data=predictions, num_cores=self.settings.num_umap_cores,
+                                     dims=self.settings.vis_dims)
+            embeddings = umap.get_embeddings()
         for _, pred in enumerate(predictions):
             probabilities = tf.nn.softmax(pred)
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
         labels = np.asarray(list(map(lambda x: labels_map[x], labels)))  # TODO: Change to numpy map
+        if embeddings:
+            return np.append(np.append(data, embeddings, axies=1), labels[:, None], axis=1)
         return np.append(data, labels[:, None], axis=1)
 
     def run_classification(self) -> dict:
         outputs = {}
         for file in self.files:
+            # TODO: Make small pop-up window that shows progress
             outputs[file] = self.__make_predictions(file=file)
         return outputs
 
@@ -179,8 +191,8 @@ class ClassificationModel(AppModels):
         return labels
 
     def run_diagnostics(self) -> np.ndarray:
-        true_labels = self.file_prep.get_labels()
         outputs = self.__make_predictions(diagnostics=True)
+        true_labels = self.file_prep.get_labels()
         labels_compared = self.__diagnostic_plots(true_labels=true_labels, predicted_labels=outputs[:, -1])
         outputs[:, -1] = labels_compared
         return outputs
@@ -242,15 +254,14 @@ class AutoEncoder(AppModels):
         for key, value in clusters_content_labels.items():
             types, counts = np.unique(value, return_counts=True)
             count_blank = np.take(counts, np.where(types == "Blank")).sum()
-            counts_blank_perc = np.round(count_blank / counts * 100, 2)
-            clusters_blank_count[key] = {"count_blank %": counts_blank_perc}
+            clusters_blank_count[key] = np.round((count_blank / counts.sum()) * 100, 2)
         return dataframe, y_predicted, clusters_blank_count
 
     @staticmethod
     def __remove_blank_clusters(dataframe, y_predicted, clusters_blank_count: dict) -> tuple:
         indexes = []
         for key, value in clusters_blank_count.items():
-            if clusters_blank_count[key]["count_blank %"] > 10:  # TODO: Make this (10) a hyperparameter
+            if clusters_blank_count[key] > 10:  # TODO: Make this (10) a hyperparameter
                 indexes.extend(np.where(y_predicted == key)[0].tolist())
         dataframe = np.delete(dataframe, indexes, axis=0)
         y_predicted = np.delete(y_predicted, indexes, axis=0)
@@ -282,16 +293,17 @@ class AutoEncoder(AppModels):
         np.save(f"autoencoders/.clean_data/{name}_clean", data_clean)
         return data_clean
 
-    def run_training(self, name: str) -> None:
+    def run_training(self) -> None:
         num_clusters = self.__calculate_num_clusters()
         dataframe, y_predicted, clusters_blank_count = self.__get_clusters(optimal_k=num_clusters)
         dataframe, y_predicted, remaining_clusters = self.__remove_blank_clusters(dataframe, y_predicted,
                                                                                   clusters_blank_count)
-        data_clean = self.__remove_outliers(dataframe, y_predicted, remaining_clusters, name)
+        data_clean = self.__remove_outliers(dataframe, y_predicted, remaining_clusters, self.name)
         columns = self.file_prep.get_features()
         feature_shape = data_clean.shape[1]
-        self.model_info.add_autoencoder(name=name, fc_type=self.settings.fc_type, features=columns,
+        self.model_info.add_autoencoder(name=self.name, fc_type=self.settings.fc_type, features=columns,
                                         num_features=feature_shape)
-        training_set, test_set = self.__create_training_files(dataframe)
-        self.__train_model(name, training_set, test_set)
+        training_set, test_set = self.create_training_files(data_clean)
+        self.compile_model()
+        self.train_model(self.name, training_set, test_set)
         self.model_info.save_info()

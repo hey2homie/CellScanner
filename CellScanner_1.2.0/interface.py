@@ -7,15 +7,21 @@ from utilities.classification_utils import ClassificationModel, AutoEncoder
 
 
 def run_prediction():
+
     if arguments.path is None or check_path(arguments.path) is None:
         raise argparse.ArgumentTypeError("Incorrect path or empty directory")
     files = [os.path.join(arguments.path, file) for file in os.listdir(arguments.path)]
     if arguments.command == "predict":
-        model = ClassificationModel(settings=settings, model_info=models_info, files=files)
+        model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
+                                    name=settings.model)
         model.run_classification()
+        # TODO: Save results as visuals
+        print("Classification is finished")
     elif arguments.command == "validate":
-        model = ClassificationModel(settings=settings, model_info=models_info, files=files)
+        model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
+                                    name=settings.model)
         model.run_diagnostics()
+        print("Validation is finished")
     elif arguments.command == "train":
         if arguments.name:
             model_name = arguments.name[0]
@@ -33,11 +39,14 @@ def run_prediction():
                     break
         if model_name and training_type:
             if training_type == "classifier":
-                model = ClassificationModel(settings=settings, model_info=models_info, files=files)
-                model.run_training(name=model_name)
+                model = ClassificationModel(settings=settings, model_info=models_info, files=files,
+                                            model_type="classifier", name=model_name, training=True)
+
             else:
-                autoencoder = AutoEncoder(settings=settings, model_info=models_info, files=files)
-                autoencoder.run_training(name=model_name)
+                model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
+                                    name=model_name, training=True)
+            model.run_training()
+            print("Training is finished")
         else:
             raise argparse.ArgumentTypeError("No arguments provided")
 
@@ -102,7 +111,7 @@ def main():
     global arguments
     arguments = parser.parse_args()
 
-    if arguments.command == "predict" or arguments.command == "train" or arguments.command == "diagnose":
+    if arguments.command == "predict" or arguments.command == "train" or arguments.command == "validate":
         run_prediction()
     elif arguments.command == "settings":
         run_settings()

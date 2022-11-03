@@ -12,7 +12,6 @@ from gui.widgets import Stack
 
 
 def main():
-    # TODO: Global alignment of the labels that should be in the center
     app = QApplication(sys.argv)
     stack = Stack()
     start = MainWindow(stack=stack)

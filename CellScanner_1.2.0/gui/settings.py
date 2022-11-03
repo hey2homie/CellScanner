@@ -30,7 +30,7 @@ class SettingsWindow(Widget):
         Label(text="FC type:", obj_name="small", geometry=[46, 148, 146, 30], parent=self)
         ComboBox(obj_name="combobox", geometry=[201, 148, 108, 30], name="fc_type", parent=self)
         Label(text="Hardware:", obj_name="small", geometry=[332, 148, 88, 30], parent=self)
-        ComboBox(obj_name="combobox", geometry=[427, 148, 69, 30], name="hardware", parent=self)
+        ComboBox(obj_name="combobox", geometry=[427, 148, 85, 30], name="hardware", parent=self)
         Label(text="Output location:", obj_name="small", geometry=[46, 185, 146, 30], parent=self)
         Label(obj_name="small", geometry=[201, 185, 526, 30], name="results", parent=self)
         Button(text="Change", obj_name="settings", geometry=[736, 185, 65, 30], parent=self)
@@ -73,6 +73,7 @@ class SettingsWindow(Widget):
     def set_values_from_config(self) -> None:
         for child in self.children():
             if isinstance(child, (ComboBox, CheckableComboBox)):
+                child.clear()
                 if child.name != "vis_channels" and child.name != "cols_to_drop":
                     child.addItems(self.combo_boxes_content[child.name])
                 else:

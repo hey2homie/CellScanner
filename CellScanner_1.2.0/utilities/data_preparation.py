@@ -26,7 +26,6 @@ class FilePreparation:
         self.models_info = models_info
         self.fc_type = settings.fc_type
         self.gating_type = settings.gating_type
-        self.autoencoder = settings.autoencoder
         self.mse_threshold = settings.mse_threshold
         self.cols_drop = settings.cols_to_drop_accuri if self.fc_type == "Accuri" else settings.cols_to_drop_cytoflex
         self.data = None
@@ -107,7 +106,9 @@ class FilePreparation:
                         self.data.drop(index)
         elif self.gating_type == "Autoencoder":
             from utilities.classification_utils import AutoEncoder
-            autoencoder = AutoEncoder(settings=self.settings, models_info=self.models_info)
+            self.models_info.autoencoder_name = self.settings.autoencoder
+            autoencoder = AutoEncoder(settings=self.settings, model_info=self.models_info, model_type="ae",
+                                      name=self.settings.autoencoder)
             autoencoder = autoencoder.get_model()
             predicted = autoencoder.predict(self.data)
             mse = np.log10(np.mean(np.power(self.data - predicted, 2), axis=1))

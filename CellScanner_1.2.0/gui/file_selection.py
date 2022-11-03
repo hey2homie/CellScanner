@@ -1,5 +1,4 @@
-from utilities.classification_utils import ClassificationTraining, ClassificationResults, AutoEncoder
-from utilities.data_preparation import FilePreparation
+from utilities.classification_utils import ClassificationModel, AutoEncoder
 
 from gui.widgets import Widget, DropBox, Button, EditLine, CheckBox, MessageBox
 
@@ -42,27 +41,22 @@ class FileSelector(Widget):
                     return
                 files = self.children()[0].get_files()
                 if self.children()[5].isChecked():
-                    # TODO: Next lines are repeated in the interface.py file. Refactor
-                    file_prep = FilePreparation(files=files, settings=settings, models_info=models_info, training=True)
-                    dataframe = file_prep.get_aggregated()
-                    labels = file_prep.get_labels()
-                    features = file_prep.get_features()
-                    autoencoder = AutoEncoder(settings=settings, models_info=models_info)
-                    autoencoder.retrain(dataframe=dataframe, labels=labels, name=model_name, columns=features)
+                    model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
+                                        name=model_name, training=True)
                 else:
-                    training = ClassificationTraining(files=files, model_name=model_name, settings=settings,
-                                                      models_info=models_info)
-                    training.run_training()
+                    model = ClassificationModel(settings=settings, model_info=models_info, files=files,
+                                                model_type="classifier", name=model_name, training=True)
+                model.run_training()
             else:
                 diagnostics = False if self.action == "Prediction" else True
                 files = self.children()[0].get_files()
-                models_info.classifier_name = settings.model
-                models_info.classifier_name = settings.model
-                models_info.autoencoder_name = settings.autoencoder
-                classifier = ClassificationResults(files=files, settings=settings, models_info=models_info,
-                                                   diagnostics=diagnostics)
-                outputs = classifier.run_diagnostics()
-                if not diagnostics:
+                model = ClassificationModel(settings=settings, model_info=models_info, files=files,
+                                            model_type="classifier",
+                                            name=settings.model)
+                if diagnostics:
+                    outputs = model.run_diagnostics()
+                else:
+                    outputs = model.run_classification()
                     self.stack.widget(2).set_items(files)
                 self.stack.widget(2).set_inputs(outputs)
                 self.stack.setCurrentIndex(2)

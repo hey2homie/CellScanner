@@ -158,8 +158,6 @@ class CheckableComboBox(QComboBox, Widget):
         item = self.model().item(index, 0)
         return item.checkState() == Qt.CheckState.Checked
 
-    # TODO: Add method to remove checked state for all items
-
     def set_checked_items(self, items: list) -> None:
         all_items = [self.itemText(i) for i in range(self.count())]
         for item in all_items:

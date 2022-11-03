@@ -39,7 +39,7 @@ class ResultsWindow(Widget):
         Button(text="Save Visuals", obj_name="standard", geometry=[652, 518, 200, 60], parent=self)
 
     def __init_graph(self) -> None:
-        if self.settings.vis_dims == "3D":
+        if self.settings.vis_dims == 3:
             try:
                 fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
             except ValueError:
@@ -51,7 +51,6 @@ class ResultsWindow(Widget):
                 fig = px.scatter_3d(self.data, x="X", y="Y", color="Correctness")
         fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                                       font=dict(family="Avenir", size=8, color="black")))
-        # TODO: Add plot's tittle
         self.browser.setHtml(fig.to_html(include_plotlyjs="cdn"))
 
     def __configurate_widgets(self) -> None:

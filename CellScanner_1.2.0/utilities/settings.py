@@ -1,6 +1,4 @@
-import ast
 import yaml
-import inspect
 import os
 from glob import glob
 from enum import Enum
@@ -91,17 +89,12 @@ class ModelsInfo:
             self.autoencoders = config_content["autoencoders"]
 
     def __check_models(self) -> None:
-        """
-        Checks if configuration file is up-to-date with the available classifiers. If classifier is no longer present in
-        folder, removes it from configuration file
-        Returns:
-            None
-        """
         classifiers = os.listdir("./classifiers/")
         autoencoders = [encoder for encoder in os.listdir("./autoencoders/") if encoder.endswith(".h5")]
         self.classifiers = {model: self.classifiers[model] for model in classifiers}
         self.autoencoders = {model: self.autoencoders[model] for model in autoencoders}
         self.save_info()
+        # TODO: Remove .npy files from .clean_data if ae is removed
 
     def get_features(self) -> list:
         return self.classifiers[self.classifier_name][1]["features"]
@@ -110,20 +103,23 @@ class ModelsInfo:
         return int(self.autoencoders[self.autoencoder_name][2]["num_features"])
 
     def get_labels_map(self) -> dict:
-        return self.classifiers[self.classifier_name][0]["labels_map"]
+        labels_map = self.classifiers[self.classifier_name][1]["labels_map"]
+        return {k: v for d in labels_map for k, v in d.items()}
 
     def get_features_shape_classifier(self) -> int:
-        return int(self.classifiers[self.classifier_name][1]["features_shape"])
+        return int(self.classifiers[self.classifier_name][0]["features_shape"])
 
     def get_labels_shape(self) -> int:
         return int(self.classifiers[self.classifier_name][2]["labels_shape"])
 
     def add_classifier(self, name: str, labels_map: dict, features_shape: int, labels_shape: int) -> None:
         labels_map = {key: str(value) for key, value in labels_map.items()}
-        self.classifiers[name] = [{"labels_map": labels_map}, {"features_shape": str(features_shape)},
-                                  {"labels_shape": str(labels_shape)}]
+        self.classifier_name = name
+        self.classifiers[name] = [{"features_shape": features_shape}, {"labels_map": labels_map},
+                                  {"labels_shape": labels_shape}]
 
     def add_autoencoder(self, name: str, fc_type: str, features: list, num_features: int) -> None:
+        self.autoencoder_name = name
         self.autoencoders[name] = [{"fc_type": fc_type}, {"features": features}, {"num_features": num_features}]
 
     def save_info(self) -> None:
