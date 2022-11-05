@@ -4,6 +4,7 @@ import yaml
 
 from utilities.settings import Settings, SettingsOptions, ModelsInfo
 from utilities.classification_utils import ClassificationModel, AutoEncoder
+from utilities.visualizations import MplVisualization
 
 
 def run_prediction():
@@ -14,14 +15,15 @@ def run_prediction():
     if arguments.command == "predict":
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
                                     name=settings.model)
-        model.run_classification()
-        # TODO: Save results as visuals
-        print("Classification is finished")
+        results = model.run_classification()
+        visualizations = MplVisualization(output_path=settings.results)
+        visualizations.save_predictions_visualizations(inputs=results, settings=settings)
+        print("\nClassification is finished")
     elif arguments.command == "validate":
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
                                     name=settings.model)
         model.run_diagnostics()
-        print("Validation is finished")
+        print("\nValidation is finished")
     elif arguments.command == "train":
         if arguments.name:
             model_name = arguments.name[0]
@@ -46,7 +48,7 @@ def run_prediction():
                 model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
                                     name=model_name, training=True)
             model.run_training()
-            print("Training is finished")
+            print("\nTraining is finished")
         else:
             raise argparse.ArgumentTypeError("No arguments provided")
 
@@ -98,10 +100,7 @@ def main():
     # Settings
     parser.add_argument("-s", "--show", dest="show", action="store_true", help="Show settings")
     parser.add_argument("-c", "--change", type=str, help="Change settings",
-                        choices=["fc_type", "model", "results", "vis_type", "num_umap_cores", "hardware", "num_batches",
-                                 "num_epochs", "lr", "lr_scheduler", "lr_reduced", "gating_type", "autoencoder",
-                                 "mse_threshold"],    # TODO: Parse attributes from the Settings class
-                        nargs=1)
+                        choices=list(vars(settings).keys()), nargs=1)
 
     # Retraining
     parser.add_argument("-m", "--model", type=str, help="What type of model to train",

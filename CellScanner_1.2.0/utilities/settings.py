@@ -66,7 +66,6 @@ class Settings:
         with open(".configs/config.yml", "w") as config:
             if command_line:
                 attributes = vars(self)
-                attributes.pop("attributes")
                 yaml.dump(attributes, config)
             else:
                 yaml.dump(vars(self), config)
