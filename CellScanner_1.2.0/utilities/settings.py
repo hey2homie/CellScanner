@@ -103,8 +103,7 @@ class ModelsInfo:
         return int(self.autoencoders[self.autoencoder_name][2]["num_features"])
 
     def get_labels_map(self) -> dict:
-        labels_map = self.classifiers[self.classifier_name][1]["labels_map"]
-        return {k: v for d in labels_map for k, v in d.items()}
+        return self.classifiers[self.classifier_name][1]["labels_map"]
 
     def get_features_shape_classifier(self) -> int:
         return int(self.classifiers[self.classifier_name][0]["features_shape"])

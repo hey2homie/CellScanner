@@ -13,7 +13,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
 
-from utilities.settings import Settings
+from utilities.settings import Settings, SettingsOptions
 
 
 class UmapVisualization:
@@ -54,19 +54,12 @@ class MplVisualization:
         Returns:
             None
         """
-        # TODO: Use this from settings to avoid repeating code
-        channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
-                           "Width", "Time"]
-        channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
-                             "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
-                             "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width",
-                             "Time"]
         if settings.fc_type == "Accuri":
             channels_use = settings.vis_channels_accuri
-            indexes = [channels_accuri.index(channel) for channel in channels_use]
+            indexes = [SettingsOptions.vis_channels_accuri.value.index(channel) for channel in channels_use]
         else:
             channels_use = settings.vis_channels_cytoflex
-            indexes = [channels_cytoflex.index(channel) for channel in channels_use]
+            indexes = [SettingsOptions.vis_channels_cytoflex.value.index(channel) for channel in channels_use]
         for file, data in inputs.items():
             file = file.split("/")[-1].split(".")[0]
             fig = plt.figure(figsize=(7, 7))
@@ -83,10 +76,10 @@ class MplVisualization:
             norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             colors = cmap(np.linspace(0, 1, len(labels)))
             for i, (label, color) in enumerate(zip(labels, colors), 1):
-                indexes = np.where(data[:, -1] == label)
-                axis_x = np.take(col_x, indexes, axis=0)
-                axis_y = np.take(col_y, indexes, axis=0)
-                axis_z = np.take(col_z, indexes, axis=0)
+                indexes_plot = np.where(data[:, -1] == label)
+                axis_x = np.take(col_x, indexes_plot, axis=0)
+                axis_y = np.take(col_y, indexes_plot, axis=0)
+                axis_z = np.take(col_z, indexes_plot, axis=0)
                 ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
             ax.set_xlabel(channels_use[0])
             ax.set_ylabel(channels_use[1])
