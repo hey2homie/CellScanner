@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
     QFrame, QComboBox, QLineEdit, QTextEdit, QCheckBox
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QPainter
 
 
@@ -45,7 +45,7 @@ class Label(QLabel, Widget):
 
     def __init__(self, *args, **kwargs) -> None:
         super(Label, self).__init__(*args, **kwargs)
-        if self.objectName() == "tittle" or self.objectName() == "version":
+        if self.objectName() == "tittle" or self.objectName() == "version" or self.objectName() == "overlay":
             self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
 
@@ -79,6 +79,8 @@ class Button(QPushButton, Widget):
     def __init__(self, *args, **kwargs) -> None:
         super(Button, self).__init__(*args, **kwargs)
         self.__add_action()
+        if self.text() == "?":
+            self.installEventFilter(self)
 
     def __add_action(self) -> None:
 
@@ -127,6 +129,15 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: set_output_directory(windows))
         elif self.text() == "Save Visuals":
             self.clicked.connect(lambda: windows.currentWidget().save_visuals())
+
+    def eventFilter(self, object, event) -> bool:
+        classifier = self.parent().children()[-2]
+        autoencoder = self.parent().children()[-1]
+        if event.type() == QEvent.Type.HoverEnter:
+            autoencoder.show() if self.name == "ae" else classifier.show()
+        elif event.type() == QEvent.Type.HoverLeave:
+            autoencoder.hide() if self.name == "ae" else classifier.hide()
+        return False
 
 
 class CheckBox(QCheckBox, Widget):

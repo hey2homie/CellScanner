@@ -23,6 +23,14 @@ QLabel#small {
     border-width: 1px;
 }
 
+QLabel#overlay {
+    font-size: 14px;
+    background-color: #1a1a1a;
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+}
+
 QPushButton {
     border-style: solid;
     border-color: black;

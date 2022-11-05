@@ -28,9 +28,11 @@ class MainWindow(Widget):
         Button(text="Settings", obj_name="main", geometry=[537, 91, 166, 425], parent=self)
         Button(text="Help", obj_name="main", geometry=[707, 91, 166, 425], parent=self)
 
-    # TODO: Pythonic way for getters
-    def get_settings(self) -> Settings:
+    def get_settings(self):
         return self.settings
 
-    def get_models_info(self) -> ModelsInfo:
+    def get_settings(self):
+        return self.settings
+
+    def get_models_info(self):
         return self.models_info

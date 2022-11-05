@@ -5,7 +5,6 @@ import plotly.express as px
 import numpy as np
 import pandas as pd
 
-from utilities.settings import Settings
 from utilities.visualizations import MplVisualization
 
 from gui.widgets import Widget, Button, FileBox
@@ -13,9 +12,9 @@ from gui.widgets import Widget, Button, FileBox
 
 class ResultsWindow(Widget):
 
-    def __init__(self, settings: Settings, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.settings = settings
+        self.settings = self.stack.widget(0).settings
         self.inputs = None
         self.data = None
         self.widget_graph = None

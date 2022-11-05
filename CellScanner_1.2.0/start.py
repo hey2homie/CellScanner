@@ -14,10 +14,10 @@ from gui.widgets import Stack
 def main():
     app = QApplication(sys.argv)
     stack = Stack()
-    start = MainWindow(stack=stack)
+    MainWindow(stack=stack)
     FileSelector(stack=stack)
-    ResultsWindow(stack=stack, settings=start.get_settings())
-    SettingsWindow(stack=stack, settings=start.get_settings())
+    ResultsWindow(stack=stack)
+    SettingsWindow(stack=stack)
     AboutWindow(stack=stack)
     stack.setCurrentIndex(0)
     stack.show()

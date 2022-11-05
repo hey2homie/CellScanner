@@ -112,6 +112,16 @@ class ModelsInfo:
     def get_labels_shape(self) -> int:
         return int(self.classifiers[self.classifier_name][2]["labels_shape"])
 
+    def get_readable(self, model: str, name: str) -> str:
+        if model == "classifier":
+            labels_map = self.classifiers[name][1]["labels_map"]    # TODO: Use method get_labels_map
+            labels_map = {k: v for d in labels_map for k, v in d.items()}
+            labels = [v for _, v in labels_map.items()]
+            return ", ".join(labels)
+        else:
+            features = self.autoencoders[name][1]["features"]
+            return ", ".join(features)
+
     def add_classifier(self, name: str, labels_map: dict, features_shape: int, labels_shape: int) -> None:
         labels_map = {key: str(value) for key, value in labels_map.items()}
         self.classifier_name = name

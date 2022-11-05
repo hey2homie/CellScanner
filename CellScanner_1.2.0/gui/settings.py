@@ -1,11 +1,11 @@
 from utilities.settings import Settings, SettingsOptions
 
-from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label
+from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit
 
 
 class SettingsWindow(Widget):
 
-    def __init__(self, settings: Settings, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         """
         Args:
             stack (QStackedWidget): The stacked widget containing the all application's windows.
@@ -14,7 +14,8 @@ class SettingsWindow(Widget):
             **kwargs: Optional arguments of the QWidget class.
         """
         super().__init__(*args, **kwargs)
-        self.settings = settings
+        self.settings = self.stack.widget(0).settings
+        self.model_info = self.stack.widget(0).models_info
         self.combo_boxes_content = SettingsOptions.get_dictionary()
         self.__init_ui()
 
@@ -69,6 +70,30 @@ class SettingsWindow(Widget):
         EditLine(obj_name="input", geometry=[664, 576, 42, 30], name="mse_threshold", parent=self)
         Button(text="Menu", obj_name="standard", geometry=[46, 618, 200, 60], parent=self)
         Button(text="Apply", obj_name="standard", geometry=[652, 618, 200, 60], parent=self)
+        """Label(text=self.model_info.get_readable(model="classifier", name=self.settings.model), obj_name="overlay",
+              name="classifier", geometry=[370, 104, 300, 100], parent=self)
+        Label(text=self.model_info.get_readable(model="ae", name=self.settings.autoencoder), obj_name="overlay",
+              name="ae", geometry=[379, 306, 300, 100], parent=self)"""
+        TextEdit(obj_name="overlay", name="classifier", geometry=[370, 104, 300, 100], parent=self)
+        TextEdit(obj_name="overlay", name="ae", geometry=[379, 306, 300, 100], parent=self)
+        self.children()[-1].hide()
+        self.children()[-1].setText(self.model_info.get_readable(model="ae", name=self.settings.autoencoder))
+        # self.children()[-1].setWordWrap(True)
+        self.children()[-2].hide()
+        self.children()[-2].setText(self.model_info.get_readable(model="classifier", name=self.settings.model))
+        # self.children()[-2].setWordWrap(True)
+        self.children()[-8].currentIndexChanged.connect(lambda: self.update_layouts(8))
+        self.children()[-23].currentIndexChanged.connect(lambda: self.update_layouts(23))
+
+    def update_layouts(self, combobox: int):
+        name = self.children()[-combobox].currentText()
+        try:
+            if combobox == 8:
+                self.children()[-1].setText(self.model_info.get_readable(model="ae", name=name))
+            else:
+                self.children()[-2].setText(self.model_info.get_readable(model="classifier", name=name))
+        except KeyError:
+            pass
 
     def set_values_from_config(self) -> None:
         for child in self.children():
