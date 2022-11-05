@@ -115,7 +115,6 @@ class ModelsInfo:
     def get_readable(self, model: str, name: str) -> str:
         if model == "classifier":
             labels_map = self.classifiers[name][1]["labels_map"]    # TODO: Use method get_labels_map
-            labels_map = {k: v for d in labels_map for k, v in d.items()}
             labels = [v for _, v in labels_map.items()]
             return ", ".join(labels)
         else:

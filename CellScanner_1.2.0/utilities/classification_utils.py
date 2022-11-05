@@ -112,10 +112,10 @@ class AppModels(ABC):
     def train_model(self, name: str, training_set: tf.data.Dataset, test_set: tf.data.Dataset,
                     scheduler: list = None) -> None:
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
-        callbacks = [ModelCheckpoint(folder + name + ".h5", save_best_only=True)]
+        callbacks = [ModelCheckpoint(folder + name, save_best_only=True)]
         if scheduler:
             callbacks.extend(scheduler)
-        self.model.fit(training_set, validation_data=test_set, epochs=50, callbacks=callbacks)
+        self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs, callbacks=callbacks)
 
     def get_model(self) -> Model:
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
@@ -143,7 +143,7 @@ class ClassificationModel(AppModels):
         num_features, num_classes = files.shape[1], np.unique(labels).shape[0]
         self.model_info.add_classifier(self.name, labels_map, num_features, num_classes)
         scheduler = None
-        if self.settings.lr_scheduler == "Time Based Decay":
+        if self.settings.lr_scheduler == "Time Decay":
             scheduler = [LearningRateScheduler(self.__time_based_decay)]
         elif self.settings.lr_scheduler == "Step Decay":
             scheduler = [LearningRateScheduler(self.__step_decay)]

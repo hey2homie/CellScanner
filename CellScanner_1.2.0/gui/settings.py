@@ -1,3 +1,6 @@
+import os
+from glob import glob
+
 from utilities.settings import Settings, SettingsOptions
 
 from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit
@@ -96,6 +99,8 @@ class SettingsWindow(Widget):
             pass
 
     def set_values_from_config(self) -> None:
+        self.combo_boxes_content["model"] = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
+        self.combo_boxes_content["autoencoder"] = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
         for child in self.children():
             if isinstance(child, (ComboBox, CheckableComboBox)):
                 child.clear()

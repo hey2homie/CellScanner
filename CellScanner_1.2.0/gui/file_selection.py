@@ -39,6 +39,7 @@ class FileSelector(Widget):
                 if model_name == "":
                     MessageBox.about(self, "Warning", "Model name is not provided")
                     return
+                model_name = model_name + ".h5"
                 files = self.children()[0].get_files()
                 if self.children()[5].isChecked():
                     model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
@@ -47,6 +48,7 @@ class FileSelector(Widget):
                     model = ClassificationModel(settings=settings, model_info=models_info, files=files,
                                                 model_type="classifier", name=model_name, training=True)
                 model.run_training()
+                self.stack.widget(3).set_values_from_config()
             else:
                 diagnostics = False if self.action == "Prediction" else True
                 files = self.children()[0].get_files()

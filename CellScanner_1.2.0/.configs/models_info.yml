@@ -20,7 +20,7 @@ classifiers:
   test_bt_bi_ec.h5:
   - features_shape: 13
   - labels_map:
-    - 0: Bacteroides thetaiotaomicron
-    - 1: Barsniella intestihominis
-    - 2: Escherichia coli
+      0: Bacteroides thetaiotaomicron
+      1: Barsniella intestihominis
+      2: Escherichia coli
   - labels_shape: 3
