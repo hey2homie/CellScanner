@@ -35,15 +35,13 @@ class FilePreparation:
         self.training = training
 
     def __check_extension(self):
-        # TODO: Consider showing warning message
-        # TODO: Add support for Excel files
         """
-        Checks if the provided files have correct extension, which can be .fcs, .csv or .tsv.
+        Checks if the provided files have correct extension, which can be .fcs, .csv, .tsv, or .xlsx files.
         Returns:
             None
         """
         for file in self.files_list:
-            if file.split(".")[-1] not in ["fcs", "csv", "tsv"]:
+            if file.split(".")[-1] not in ["fcs", "csv", "tsv", "xlsx"]:
                 self.files_list.remove(file)
 
     def __convert(self, file: str) -> None:
@@ -52,7 +50,15 @@ class FilePreparation:
         Args:
             file (str): Path to the file.
         """
-        meta, self.data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
+        extension = file.split(".")[-1]
+        if extension == "fcs":
+            _, self.data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
+        elif extension == "csv":
+            self.data = pd.read_csv(file)
+        elif extension == "tsv":
+            self.data = pd.read_csv(file, sep="\t")
+        elif extension == "xlsx":
+            self.data = pd.read_excel(file)
 
     def __drop_columns(self, file: str) -> None:
         # TODO: Add extra columns from config
@@ -88,23 +94,7 @@ class FilePreparation:
         Returns:
             None
         """
-        if self.gating_type == "Line":
-            if self.fc_type == "Accuri":
-                # TODO: Add support for custom boundaries
-                for index, row in self.data.iterrows():
-                    if (10 ** row["FL3-A"]) > (0.0241 * (10 ** row["FL3-A"]) ** 1.0996):
-                        self.data.drop(index)
-                    elif row["FSC-A"] > 5.0 and row["SSC-A"] > 4.0:
-                        self.data.drop(index)
-                    elif row["FSC-A"] > (row["FSC-H"] + 0.5) or row["FSC-A"] < (row["FSC-H"] - 0.5):
-                        self.data.drop(index)
-            elif self.fc_type == "CytoFlex":
-                for index, row in self.data.iterrows():
-                    if row["FL3-A"] > (1.5 * row["'FL1-A'"] - 2.8) or row["FL2-A"] > (2.5 * row["FL1-A"] - 9):
-                        self.data.drop(index)
-                    elif row["FSC-A"] > (row["FSC-H"] + 0.6) or row["FSC-A"] > (row["FSC-H"] - 0.6):
-                        self.data.drop(index)
-        elif self.gating_type == "Autoencoder":
+        if self.gating_type == "Autoencoder":
             from utilities.classification_utils import AutoEncoder
             self.models_info.autoencoder_name = self.settings.autoencoder
             autoencoder = AutoEncoder(settings=self.settings, model_info=self.models_info, model_type="ae",
@@ -112,7 +102,9 @@ class FilePreparation:
             autoencoder = autoencoder.get_model()
             predicted = autoencoder.predict(self.data)
             mse = np.log10(np.mean(np.power(self.data - predicted, 2), axis=1))
-            # TODO: Better raise window with plot to allow user to choose the threshold from visual aid
+            # TODO: Do not remove observations but add a column with the mse values
+            # Then, in plotly add a slider to filter out the observations with mse > threshold
+            # Though plot of MSE distribution should be there as well
             self.data = self.data[mse < self.mse_threshold]
         else:
             raise NotImplementedError   # TODO: Implementation of method from the previous version

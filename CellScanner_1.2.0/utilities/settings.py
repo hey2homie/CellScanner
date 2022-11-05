@@ -22,7 +22,7 @@ class SettingsOptions(Enum):
     hardware = ["GPU", "CPU"]
     lr = ["1e-6", "1e-5", "1e-4", "1e-3", "1e-2"]
     lr_scheduler = ["Constant", "Time Decay", "Step Decay", "Exponential Decay"]
-    gating_type = ["Line", "Autoencoder", "Machine"]
+    gating_type = ["Autoencoder", "Machine"]
 
     @classmethod
     def get_dictionary(cls) -> dict:
@@ -49,6 +49,8 @@ class Settings:
     lr = None
     gating_type = None
     autoencoder = None
+    cols_to_drop_accuri = None
+    cols_to_drop_cytoflex = None
     mse_threshold = None
 
     def __init__(self) -> None:
