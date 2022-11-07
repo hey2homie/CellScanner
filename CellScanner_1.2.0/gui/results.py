@@ -38,7 +38,7 @@ class ResultsWindow(Widget):
         Button(text="Save Visuals", obj_name="standard", geometry=[652, 518, 200, 60], parent=self)
 
     def __init_graph(self) -> None:
-        if self.settings.vis_dims == 3:
+        if self.settings.vis_dims == "3":
             try:
                 fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
             except ValueError:

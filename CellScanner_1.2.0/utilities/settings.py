@@ -97,8 +97,8 @@ class ModelsInfo:
         self.save_info()
         # TODO: Remove .npy files from .clean_data if ae is removed
 
-    def get_features(self) -> list:
-        return self.classifiers[self.classifier_name][1]["features"]
+    def get_features_ae(self) -> list:
+        return self.autoencoders[self.autoencoder_name][1]["features"]
 
     def get_features_shape_ae(self) -> int:
         return int(self.autoencoders[self.autoencoder_name][2]["num_features"])

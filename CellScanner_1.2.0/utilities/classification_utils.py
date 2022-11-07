@@ -138,7 +138,7 @@ class AppModels(ABC):
 class ClassificationModel(AppModels):
 
     def run_training(self) -> None:
-        files, labels = self.file_prep.get_aggregated(), self.file_prep.get_labels()
+        files, labels = self.file_prep.get_aggregated()
         training_set, test_set, labels_map = self.create_training_files(files, labels)
         num_features, num_classes = files.shape[1], np.unique(labels).shape[0]
         self.model_info.add_classifier(self.name, labels_map, num_features, num_classes)
@@ -153,15 +153,13 @@ class ClassificationModel(AppModels):
         self.train_model(self.name, training_set, test_set, scheduler=scheduler)
         self.model_info.save_info()
 
-    def __make_predictions(self, file: str = None, diagnostics: bool = False) -> np.ndarray:
+    def __make_predictions(self, dataframe: np.ndarray, diagnostics: bool = False) -> np.ndarray:
         self.get_model()
         labels_map = self.model_info.get_labels_map()
         labels = []
         if diagnostics:
-            data = self.file_prep.get_aggregated()
-        else:
-            data = self.file_prep.get_data(file)
-        predictions = self.model.predict(data)
+            dataframe, true_labels = self.file_prep.get_aggregated()
+        predictions = self.model.predict(dataframe)
         embeddings = None
         if self.settings.vis_type == "UMAP":
             umap = UmapVisualization(data=predictions, num_cores=self.settings.num_umap_cores,
@@ -172,14 +170,19 @@ class ClassificationModel(AppModels):
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
         labels = np.asarray(list(map(lambda x: labels_map[x], labels)))  # TODO: Change to numpy map
         if embeddings:
-            return np.append(np.append(data, embeddings, axies=1), labels[:, None], axis=1)
-        return np.append(data, labels[:, None], axis=1)
+            return np.append(np.append(dataframe, embeddings, axies=1), labels[:, None], axis=1)
+        dataframe = np.append(dataframe, labels[:, None], axis=1)
+        try:
+            dataframe = np.append(dataframe, true_labels[:, None], axis=1)
+        except NameError:
+            pass
+        return dataframe
 
     def run_classification(self) -> dict:
-        outputs = {}
-        for file in self.files:
+        outputs = self.file_prep.get_prepared_inputs()
+        for key, dataframe in outputs.items():
             # TODO: Make small pop-up window that shows progress
-            outputs[file] = self.__make_predictions(file=file)
+            outputs[key] = self.__make_predictions(dataframe[0])
         return outputs
 
     def __diagnostic_plots(self, true_labels, predicted_labels) -> list:
@@ -192,7 +195,7 @@ class ClassificationModel(AppModels):
 
     def run_diagnostics(self) -> np.ndarray:
         outputs = self.__make_predictions(diagnostics=True)
-        true_labels = self.file_prep.get_labels()
+        true_labels = outputs[:, -2]
         labels_compared = self.__diagnostic_plots(true_labels=true_labels, predicted_labels=outputs[:, -1])
         outputs[:, -1] = labels_compared
         return outputs
@@ -242,7 +245,7 @@ class AutoEncoder(AppModels):
         return optimal_k
 
     def __get_clusters(self, optimal_k: int) -> tuple:
-        dataframe, labels = self.file_prep.get_aggregated(), self.file_prep.get_labels()
+        dataframe, labels, features = self.file_prep.get_aggregated()
         kmeans = KMeans(n_clusters=optimal_k)
         y_predicted = kmeans.fit_predict(dataframe)
         clusters_content_labels = {}
@@ -255,7 +258,7 @@ class AutoEncoder(AppModels):
             types, counts = np.unique(value, return_counts=True)
             count_blank = np.take(counts, np.where(types == "Blank")).sum()
             clusters_blank_count[key] = np.round((count_blank / counts.sum()) * 100, 2)
-        return dataframe, y_predicted, clusters_blank_count
+        return dataframe, y_predicted, clusters_blank_count, features
 
     @staticmethod
     def __remove_blank_clusters(dataframe, y_predicted, clusters_blank_count: dict) -> tuple:
@@ -294,12 +297,11 @@ class AutoEncoder(AppModels):
         return data_clean
 
     def run_training(self) -> None:
-        num_clusters = self.__calculate_num_clusters()
-        dataframe, y_predicted, clusters_blank_count = self.__get_clusters(optimal_k=num_clusters)
+        num_clusters, columns = self.__calculate_num_clusters()
+        dataframe, y_predicted, clusters_blank_count, columns = self.__get_clusters(optimal_k=num_clusters)
         dataframe, y_predicted, remaining_clusters = self.__remove_blank_clusters(dataframe, y_predicted,
                                                                                   clusters_blank_count)
         data_clean = self.__remove_outliers(dataframe, y_predicted, remaining_clusters, self.name)
-        columns = self.file_prep.get_features()
         feature_shape = data_clean.shape[1]
         self.model_info.add_autoencoder(name=self.name, fc_type=self.settings.fc_type, features=columns,
                                         num_features=feature_shape)
