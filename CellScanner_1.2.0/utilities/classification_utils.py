@@ -9,7 +9,7 @@ from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPool
 from keras.optimizers import Adam
 from keras.losses import SparseCategoricalCrossentropy
 from keras.activations import elu
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
@@ -112,7 +112,10 @@ class AppModels(ABC):
     def train_model(self, name: str, training_set: tf.data.Dataset, test_set: tf.data.Dataset,
                     scheduler: list = None) -> None:
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
-        callbacks = [ModelCheckpoint(folder + name, save_best_only=True)]
+        checkpoint = ModelCheckpoint(folder + name, save_best_only=True)
+        tf_board = TensorBoard(log_dir=".tflogs/" + self.name, histogram_freq=1, write_graph=False, write_images=False,
+                               update_freq="epoch")
+        callbacks = [checkpoint, tf_board]
         if scheduler:
             callbacks.extend(scheduler)
         self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs, callbacks=callbacks)
@@ -138,18 +141,34 @@ class AppModels(ABC):
 class ClassificationModel(AppModels):
 
     def run_training(self) -> None:
-        files, labels = self.file_prep.get_aggregated()
+
+        def __time_based_decay(epoch: int, lr: float) -> float:
+            decay = self.settings.lr / self.settings.num_epochs
+            # TODO: Fix missing 1 required positional argument: 'lr'
+            return lr * 1 / (1 + decay * epoch)
+
+        def __step_decay(epoch: int) -> float:
+            drop_rate = 0.5
+            epochs_drop = 10.0
+            return self.settings.lr * np.pow(drop_rate, np.floor(epoch / epochs_drop))
+
+        def __exp_decay(epoch: int) -> float:
+            k = 0.1
+            return self.settings.lr * np.exp(-k * epoch)
+
+        files, labels, _ = self.file_prep.get_aggregated()
         training_set, test_set, labels_map = self.create_training_files(files, labels)
         num_features, num_classes = files.shape[1], np.unique(labels).shape[0]
         self.model_info.add_classifier(self.name, labels_map, num_features, num_classes)
         scheduler = None
         if self.settings.lr_scheduler == "Time Decay":
-            scheduler = [LearningRateScheduler(self.__time_based_decay)]
+            scheduler = [LearningRateScheduler(__time_based_decay)]
         elif self.settings.lr_scheduler == "Step Decay":
-            scheduler = [LearningRateScheduler(self.__step_decay)]
+            scheduler = [LearningRateScheduler(__step_decay)]
         elif self.settings.lr_scheduler == "Exponential Decay":
-            scheduler = [LearningRateScheduler(self.__exp_decay)]
+            scheduler = [LearningRateScheduler(__exp_decay)]
         self.compile_model()
+        # TODO: Here change window to training results
         self.train_model(self.name, training_set, test_set, scheduler=scheduler)
         self.model_info.save_info()
 
@@ -200,43 +219,11 @@ class ClassificationModel(AppModels):
         outputs[:, -1] = labels_compared
         return outputs
 
-    def __time_based_decay(self, epoch: int, lr: float) -> float:
-        """
-        Args:
-            epoch (int): Current epoch
-            lr (float): Current learning rate
-        Returns:
-            decay_rate (float): New learning rate
-        """
-        decay = self.settings.lr * self.settings.num_epochs
-        return lr * 1 / (1 + decay * epoch)
-
-    def __step_decay(self, epoch: int) -> float:
-        """
-        Args:
-            epoch (int): Current epoch
-        Returns:
-            decay_rate (float): New learning rate
-        """
-        drop_rate = 0.5
-        epochs_drop = 10.0
-        return self.settings.lr * np.pow(drop_rate, np.floor(epoch / epochs_drop))
-
-    def __exp_decay(self, epoch: int) -> float:
-        """
-        Args:
-            epoch (int): Current epoch
-        Returns:
-            decay_rate (float): New learning rate
-        """
-        k = 0.1
-        return self.settings.lr * np.exp(-k * epoch)
-
 
 class AutoEncoder(AppModels):
 
     def __calculate_num_clusters(self) -> int:
-        dataframe = self.file_prep.get_aggregated()
+        dataframe, _, _ = self.file_prep.get_aggregated()
         gms_per_k = [GaussianMixture(n_components=k, n_init=10, random_state=42).fit(dataframe) for k in range(1, 11)]
         aics = np.log10(np.abs(np.array([model.aic(dataframe) for model in gms_per_k])))
         delta_aics = np.diff(aics)
@@ -297,12 +284,13 @@ class AutoEncoder(AppModels):
         return data_clean
 
     def run_training(self) -> None:
-        num_clusters, columns = self.__calculate_num_clusters()
+        num_clusters = self.__calculate_num_clusters()
         dataframe, y_predicted, clusters_blank_count, columns = self.__get_clusters(optimal_k=num_clusters)
         dataframe, y_predicted, remaining_clusters = self.__remove_blank_clusters(dataframe, y_predicted,
                                                                                   clusters_blank_count)
         data_clean = self.__remove_outliers(dataframe, y_predicted, remaining_clusters, self.name)
         feature_shape = data_clean.shape[1]
+        print(columns)
         self.model_info.add_autoencoder(name=self.name, fc_type=self.settings.fc_type, features=columns,
                                         num_features=feature_shape)
         training_set, test_set = self.create_training_files(data_clean)

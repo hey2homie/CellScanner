@@ -1,4 +1,7 @@
+import subprocess
+
 from PyQt6 import QtWebEngineWidgets
+from PyQt6.QtCore import QUrl
 from PyQt6.QtWidgets import QGridLayout
 
 import plotly.express as px
@@ -10,7 +13,7 @@ from utilities.visualizations import MplVisualization
 from gui.widgets import Widget, Button, FileBox
 
 
-class ResultsWindow(Widget):
+class ResultsClassification(Widget):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -86,3 +89,28 @@ class ResultsWindow(Widget):
     def save_visuals(self) -> None:
         visualizations = MplVisualization(output_path=self.settings.results)
         visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
+
+
+class ResultsTraining(Widget):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.browser = QtWebEngineWidgets.QWebEngineView(parent=None)
+        self.tf_board = None
+        self.__init_ui()
+
+    def __init_ui(self) -> None:
+        self.setWindowTitle("Results")
+        self.__init_widgets()
+
+    def __init_widgets(self) -> None:
+        self.widget_browser = Widget(obj_name="", geometry=[46, 43, 808, 450], parent=self)
+        self.layout_graph = QGridLayout(parent=self.widget_browser)
+        self.layout_graph.addWidget(self.browser)
+        Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
+
+    def run_tf_board(self, name: str) -> None:
+        self.tf_board = subprocess.Popen(["tensorboard", "--logdir=.tflogs/" + name, "--port=6006"])
+        self.browser.load(QUrl("http://localhost:6006/#scalars"))
+        self.browser.reload()
+        self.widget_browser.layout().addWidget(self.browser)

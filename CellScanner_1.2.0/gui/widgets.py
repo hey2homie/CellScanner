@@ -96,6 +96,8 @@ class Button(QPushButton, Widget):
                 if stack.currentIndex() == 3:
                     stack.widget(3).set_values_from_config()
                     stack.setGeometry(*[300, 300, 895, 600])
+                elif stack.currentIndex() == 5:
+                    stack.widget(5).tf_board.kill()
                 stack.setCurrentIndex(0)
                 stack.center()
 

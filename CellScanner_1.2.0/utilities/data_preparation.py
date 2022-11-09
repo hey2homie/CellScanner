@@ -39,7 +39,7 @@ class FilePreparation:
             self.models_info.autoencoder_name = self.settings.autoencoder
             cols_to_drop = self.models_info.get_features_ae()
         try:
-            dataframe = dataframe[cols_to_drop]
+            dataframe = dataframe[cols_to_drop] if not self.training else dataframe.drop(cols_to_drop, axis=1)
             features = np.array(dataframe.columns)
             return dataframe, features
         except KeyError:
@@ -56,24 +56,21 @@ class FilePreparation:
         return dataframe
 
     def __gate(self, dataframe: pd.DataFrame) -> np.ndarray:
-        if self.settings.gating_type == "Autoencoder":
+        if self.settings.gating_type == "Autoencoder" and not self.training:
             from utilities.classification_utils import AutoEncoder
             self.models_info.autoencoder_name = self.settings.autoencoder
             autoencoder = AutoEncoder(settings=self.settings, model_info=self.models_info, model_type="ae",
                                       name=self.settings.autoencoder)
             autoencoder = autoencoder.get_model()
-            try:
-                predicted = autoencoder.predict(dataframe)
-            except ValueError:
-                raise ValueError("The autoencoder cannot process this file")    # TODO: Print file name
-                # Because of the different number of features
+            predicted = autoencoder.predict(dataframe)
             mse = np.log10(np.mean(np.power(dataframe - predicted, 2), axis=1))
             # TODO: Do not remove observations but add a column with the mse values
             # Then, in plotly add a slider to filter out the observations with mse > threshold
             # Though plot of MSE distribution should be there as well
-            dataframe = dataframe[mse < self.settings.mse_threshold]
+            # dataframe = dataframe[mse < self.settings.mse_threshold]
         else:
-            raise NotImplementedError
+            # raise NotImplementedError
+            pass
         return np.array(dataframe)
 
     @staticmethod
@@ -105,7 +102,7 @@ class FilePreparation:
 
     def get_aggregated(self) -> tuple:
         self.get_prepared_inputs()
-        features = np.unique(self.features.values())
+        features = list(np.unique(list(self.features.values())))
         data, labels = [], []
         for key, value in self.data.items():
             data.append(value[0])
