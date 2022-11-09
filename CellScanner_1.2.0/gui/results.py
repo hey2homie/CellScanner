@@ -4,7 +4,7 @@ from PyQt6 import QtWebEngineWidgets
 from PyQt6.QtCore import QUrl
 from PyQt6.QtWidgets import QGridLayout
 
-import plotly.express as px
+from plotly.express import scatter_3d, scatter
 import numpy as np
 import pandas as pd
 
@@ -21,6 +21,8 @@ class ResultsClassification(Widget):
         self.inputs = None
         self.data = None
         self.widget_graph = None
+        self.graph_outputs = None
+        self.graph_mse_err = None
         self.layout_graph = None
         self.browser = QtWebEngineWidgets.QWebEngineView(parent=None)
         self.file_box = None
@@ -32,35 +34,41 @@ class ResultsClassification(Widget):
         self.__configurate_widgets()
 
     def __init_widgets(self) -> None:
-        self.widget_graph = Widget(obj_name="", geometry=[273, 43, 581, 450], parent=self)
+        self.widget_graph = Widget(obj_name="", geometry=[254, 43, 595, 450], parent=self)
         self.layout_graph = QGridLayout(parent=self.widget_graph)
         self.layout_graph.addWidget(self.browser)
-        self.file_box = FileBox(obj_name="select", geometry=[47, 43, 200, 450], parent=self)
-        Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
-        Button(text="Save Data", obj_name="standard", geometry=[349, 518, 200, 60], parent=self)
-        Button(text="Save Visuals", obj_name="standard", geometry=[652, 518, 200, 60], parent=self)
+        self.file_box = FileBox(obj_name="select", geometry=[46, 43, 180, 450], parent=self)
+        Button(text="Menu", obj_name="standard", geometry=[46, 518, 180, 60], parent=self)
+        Button(text="MSE", obj_name="standard", geometry=[254, 518, 180, 60], parent=self)
+        Button(text="Save Data", obj_name="standard", geometry=[462, 518, 180, 60], parent=self)
+        Button(text="Save Visuals", obj_name="standard", geometry=[669, 518, 180, 60], parent=self)
 
-    def __init_graph(self) -> None:
+    def __make_plots(self) -> None:
         if self.settings.vis_dims == "3":
             try:
-                fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
+                self.graph_outputs = scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
             except ValueError:
-                fig = px.scatter_3d(self.data, x="X", y="Y", z="Z", color="Correctness")
+                self.graph_outputs = scatter_3d(self.data, x="X", y="Y", z="Z", color="Correctness")
         else:
             try:
-                fig = px.scatter_3d(self.data, x="X", y="Y", color="Species")   # TODO: Change to 2D
+                self.graph_outputs = scatter(self.data, x="X", y="Y", color="Species")
             except ValueError:
-                fig = px.scatter_3d(self.data, x="X", y="Y", color="Correctness")
-        fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                                      font=dict(family="Avenir", size=8, color="black")))
-        self.browser.setHtml(fig.to_html(include_plotlyjs="cdn"))
+                self.graph_outputs = scatter(self.data, x="X", y="Y", color="Correctness")
+        self.graph_outputs.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                                                     font=dict(family="Avenir", size=8, color="black")))
+        try:
+            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
+        except ValueError:
+            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Correctness")
+        self.graph_mse_err.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                                                     font=dict(family="Avenir", size=8, color="black")))
+        self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
 
     def __configurate_widgets(self) -> None:
         self.layout_graph.setContentsMargins(0, 0, 0, 0)
         self.file_box.currentItemChanged.connect(lambda: self.set_inputs())
 
     def set_items(self, items: list) -> None:
-        # items = [item.split("/")[-1] for item in items]   # TODO: Remove the path to the files (if needed)
         self.file_box.addItems(items)
         self.file_box.setCurrentItem(self.file_box.item(0))
 
@@ -75,20 +83,49 @@ class ResultsClassification(Widget):
             self.inputs = inputs
             value = list(self.inputs.keys())[0]
         else:
-            value = self.file_box.currentItem().text()
+            try:
+                value = self.file_box.currentItem().text()
+            except AttributeError:
+                return None
         if self.inputs:
-            self.data = self.inputs[value]
-            self.data = pd.DataFrame({"X": self.data[:, -4].astype(np.float32),
-                                      "Y": self.data[:, -3].astype(np.float32),
-                                      "Z": self.data[:, -2].astype(np.float32),
-                                      "Species": self.data[:, -1]})
-            if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
-                self.data.rename(columns={"Species": "Correctness"}, inplace=True)
-            self.__init_graph()
+            self.data, mse = self.inputs[value][0], self.inputs[value][1]
+            if self.settings.vis_type == "UMAP":
+                self.data = pd.DataFrame({"X": self.data[:, -3].astype(np.float32),
+                                          "Y": self.data[:, -2].astype(np.float32),
+                                          "Z": self.data[:, -1].astype(np.float32),
+                                          "Species": self.data[:, -5].astype(np.str),
+                                          "Probability": self.data[:, -4].astype(np.float32),
+                                          "MSE": mse.astype(np.float32)})
+                if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
+                    self.data.rename(columns={"Species": "Correctness"}, inplace=True)
+            else:
+                pass
+            self.__make_plots()
+            self.children()[3].setText("MSE")
+            self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
+
+    def change_plot(self, plot_type: str) -> None:
+        if plot_type == "MSE":
+            self.browser.setHtml(self.graph_mse_err.to_html(include_plotlyjs="cdn"))
+            self.children()[3].setText("Predictions")
+        elif plot_type == "Predictions":
+            self.children()[3].setText("MSE")
+            self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
+
+    def save_data(self) -> None:
+        pass    # TODO: Implement method
 
     def save_visuals(self) -> None:
         visualizations = MplVisualization(output_path=self.settings.results)
         visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
+
+    def clear(self) -> None:
+        self.inputs = None
+        self.data = None
+        self.graph_outputs = None
+        self.graph_mse_err = None
+        self.file_box.clear()
+        self.browser.setHtml("")
 
 
 class ResultsTraining(Widget):

@@ -175,22 +175,26 @@ class ClassificationModel(AppModels):
     def __make_predictions(self, dataframe: np.ndarray, diagnostics: bool = False) -> np.ndarray:
         self.get_model()
         labels_map = self.model_info.get_labels_map()
-        labels = []
+        labels, probability_pred = [], []
         if diagnostics:
             dataframe, true_labels = self.file_prep.get_aggregated()
         predictions = self.model.predict(dataframe)
         embeddings = None
         if self.settings.vis_type == "UMAP":
-            umap = UmapVisualization(data=predictions, num_cores=self.settings.num_umap_cores,
-                                     dims=self.settings.vis_dims)
+            umap = UmapVisualization(data=dataframe, num_cores=int(self.settings.num_umap_cores),
+                                     dims=int(self.settings.vis_dims))
             embeddings = umap.get_embeddings()
         for _, pred in enumerate(predictions):
             probabilities = tf.nn.softmax(pred)
+            probability_pred.append(tf.get_static_value(max(probabilities)))
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
-        labels = np.asarray(list(map(lambda x: labels_map[x], labels)))  # TODO: Change to numpy map
-        if embeddings:
-            return np.append(np.append(dataframe, embeddings, axies=1), labels[:, None], axis=1)
+        labels = np.asarray(list(map(lambda x: labels_map[x], labels)))  # TODO: Change to numpy map (?)
+        probability_pred = np.asarray(probability_pred)
         dataframe = np.append(dataframe, labels[:, None], axis=1)
+        dataframe = np.append(dataframe, probability_pred[:, None], axis=1)
+        if embeddings is not None:
+            dataframe = np.append(dataframe, embeddings, axis=1)
+            return dataframe
         try:
             dataframe = np.append(dataframe, true_labels[:, None], axis=1)
         except NameError:
@@ -199,9 +203,9 @@ class ClassificationModel(AppModels):
 
     def run_classification(self) -> dict:
         outputs = self.file_prep.get_prepared_inputs()
-        for key, dataframe in outputs.items():
+        for key, data in outputs.items():
             # TODO: Make small pop-up window that shows progress
-            outputs[key] = self.__make_predictions(dataframe[0])
+            outputs[key] = [self.__make_predictions(data[0]), data[1]]
         return outputs
 
     def __diagnostic_plots(self, true_labels, predicted_labels) -> list:

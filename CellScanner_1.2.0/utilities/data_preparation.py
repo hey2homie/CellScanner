@@ -55,7 +55,7 @@ class FilePreparation:
         dataframe.reset_index(drop=True, inplace=True)
         return dataframe
 
-    def __gate(self, dataframe: pd.DataFrame) -> np.ndarray:
+    def __gate(self, dataframe: pd.DataFrame) -> tuple:
         if self.settings.gating_type == "Autoencoder" and not self.training:
             from utilities.classification_utils import AutoEncoder
             self.models_info.autoencoder_name = self.settings.autoencoder
@@ -63,15 +63,11 @@ class FilePreparation:
                                       name=self.settings.autoencoder)
             autoencoder = autoencoder.get_model()
             predicted = autoencoder.predict(dataframe)
-            mse = np.log10(np.mean(np.power(dataframe - predicted, 2), axis=1))
-            # TODO: Do not remove observations but add a column with the mse values
-            # Then, in plotly add a slider to filter out the observations with mse > threshold
-            # Though plot of MSE distribution should be there as well
-            # dataframe = dataframe[mse < self.settings.mse_threshold]
+            mse = np.mean(np.power(dataframe - predicted, 2), axis=1)
         else:
             # raise NotImplementedError
             pass
-        return np.array(dataframe)
+        return np.array(dataframe), mse
 
     @staticmethod
     def __add_labels(file: str, dataframe: pd.DataFrame) -> np.ndarray:
@@ -96,8 +92,8 @@ class FilePreparation:
                 warnings.warn(f"The {file} comes from a different flow cytometer", category=UserWarning)
                 self.data.pop(file)
             self.data[file] = self.__scale(self.data[file])
-            self.data[file] = self.__gate(self.data[file])
-            self.data[file] = [self.data[file], self.__add_labels(file=file, dataframe=self.data[file])]
+            self.data[file], mse = self.__gate(self.data[file])
+            self.data[file] = [self.data[file], mse, self.__add_labels(file=file, dataframe=self.data[file])]
         return self.data
 
     def get_aggregated(self) -> tuple:

@@ -47,7 +47,7 @@ class FileSelector(Widget):
                 else:
                     model = ClassificationModel(settings=settings, model_info=models_info, files=files,
                                                 model_type="classifier", name=model_name, training=False)
-                # model.run_training()
+                model.run_training()
                 self.stack.widget(3).set_values_from_config()
                 self.stack.widget(5).run_tf_board(name=model_name)
                 self.stack.setCurrentIndex(5)

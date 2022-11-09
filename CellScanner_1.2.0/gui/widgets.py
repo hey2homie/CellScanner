@@ -98,6 +98,8 @@ class Button(QPushButton, Widget):
                     stack.setGeometry(*[300, 300, 895, 600])
                 elif stack.currentIndex() == 5:
                     stack.widget(5).tf_board.kill()
+                elif stack.currentIndex() == 2:
+                    stack.widget(2).clear()
                 stack.setCurrentIndex(0)
                 stack.center()
 
@@ -129,6 +131,10 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: windows.widget(3).update_config())
         elif self.text() == "Change":
             self.clicked.connect(lambda: set_output_directory(windows))
+        elif self.text() == "MSE" or self.text() == "Predictions":
+            self.clicked.connect(lambda: windows.currentWidget().change_plot(plot_type=self.text()))
+        elif self.text() == "Save Data":
+            self.clicked.connect(lambda: windows.currentWidget().save_data())
         elif self.text() == "Save Visuals":
             self.clicked.connect(lambda: windows.currentWidget().save_visuals())
 

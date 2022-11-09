@@ -9,11 +9,11 @@ hardware: GPU
 lr: 1e-5
 lr_scheduler: Constant
 model: test_bt_bi_ec.h5
-mse_threshold: -1
-num_batches: 512
+mse_threshold: 0.05
+num_batches: 512.0
 num_classes: 11
-num_epochs: 5
-num_umap_cores: 8
+num_epochs: 5.0
+num_umap_cores: 8.0
 results: /Users/v_vlsv/PyCharmProjects/CellScanner/CellScanner_1.2.0/outputs
 vis_channels_accuri:
 - FL1-A
@@ -24,4 +24,4 @@ vis_channels_cytoflex:
 - FSC-A
 - SSC-H
 vis_dims: '3'
-vis_type: Channels
+vis_type: UMAP

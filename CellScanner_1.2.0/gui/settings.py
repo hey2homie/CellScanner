@@ -138,7 +138,7 @@ class SettingsWindow(Widget):
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
                     setattr(self.settings, child.name + fc, child.get_check_items())
             elif isinstance(child, EditLine):
-                setattr(self.settings, child.name, int(child.text()))
+                setattr(self.settings, child.name, float(child.text()))
             elif isinstance(child, Label) and child.name:
                 try:
                     setattr(self.settings, child.name, str(child.text()))
