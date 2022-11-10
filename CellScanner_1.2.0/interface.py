@@ -11,7 +11,10 @@ def run_prediction():
 
     if arguments.path is None or check_path(arguments.path) is None:
         raise argparse.ArgumentTypeError("Incorrect path or empty directory")
-    files = [os.path.join(arguments.path, file) for file in os.listdir(arguments.path)]
+    if os.path.isdir(arguments.path):
+        files = [os.path.join(arguments.path, file) for file in os.listdir(arguments.path)]
+    else:
+        files = [arguments.path]
     if arguments.command == "predict":
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
                                     name=settings.model)
@@ -81,8 +84,6 @@ def run_settings():
 
 def check_path(path):
     if not os.path.exists(path):
-        return None
-    elif not os.listdir(path):
         return None
     else:
         return path

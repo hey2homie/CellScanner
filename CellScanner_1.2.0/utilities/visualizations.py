@@ -63,12 +63,13 @@ class MplVisualization:
         for file, data in inputs.items():
             file = file.split("/")[-1].split(".")[0]
             fig = plt.figure(figsize=(7, 7))
+            data = data[0]
             # TODO: Add option to do 2D scatter
             ax = fig.add_subplot(projection="3d")
             col_x = list(map(float, data[:, indexes[0]]))
             col_y = list(map(float, data[:, indexes[1]]))
             col_z = list(map(float, data[:, indexes[2]]))
-            labels = np.unique(data[:, -1])
+            labels = np.unique(data[:, -2])
             cmap = plt.cm.jet
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
@@ -76,7 +77,7 @@ class MplVisualization:
             norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             colors = cmap(np.linspace(0, 1, len(labels)))
             for i, (label, color) in enumerate(zip(labels, colors), 1):
-                indexes_plot = np.where(data[:, -1] == label)
+                indexes_plot = np.where(data[:, -2] == label)
                 axis_x = np.take(col_x, indexes_plot, axis=0)
                 axis_y = np.take(col_y, indexes_plot, axis=0)
                 axis_z = np.take(col_z, indexes_plot, axis=0)
