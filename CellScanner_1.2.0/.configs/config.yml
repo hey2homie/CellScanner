@@ -24,4 +24,4 @@ vis_channels_cytoflex:
 - FSC-A
 - SSC-H
 vis_dims: '3'
-vis_type: UMAP
+vis_type: Channels

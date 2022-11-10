@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from utilities.visualizations import MplVisualization
+from utilities.settings import SettingsOptions
 
 from gui.widgets import Widget, Button, FileBox
 
@@ -43,17 +44,17 @@ class ResultsClassification(Widget):
         Button(text="Save Data", obj_name="standard", geometry=[462, 518, 180, 60], parent=self)
         Button(text="Save Visuals", obj_name="standard", geometry=[669, 518, 180, 60], parent=self)
 
-    def __make_plots(self) -> None:
+    def __make_plots(self, cols: list) -> None:
         if self.settings.vis_dims == "3":
             try:
-                self.graph_outputs = scatter_3d(self.data, x="X", y="Y", z="Z", color="Species")
+                self.graph_outputs = scatter_3d(self.data, x=cols[0], y=cols[1], z=cols[2], color="Species")
             except ValueError:
-                self.graph_outputs = scatter_3d(self.data, x="X", y="Y", z="Z", color="Correctness")
+                self.graph_outputs = scatter_3d(self.data, x=cols[0], y=cols[1], z=cols[2], color="Correctness")
         else:
             try:
-                self.graph_outputs = scatter(self.data, x="X", y="Y", color="Species")
+                self.graph_outputs = scatter(self.data, x=cols[0], y=cols[1], color="Species")
             except ValueError:
-                self.graph_outputs = scatter(self.data, x="X", y="Y", color="Correctness")
+                self.graph_outputs = scatter(self.data, x=cols[0], y=cols[1], color="Correctness")
         self.graph_outputs.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                                                      font=dict(family="Avenir", size=8, color="black")))
         try:
@@ -94,13 +95,27 @@ class ResultsClassification(Widget):
                                           "Y": self.data[:, -2].astype(np.float32),
                                           "Z": self.data[:, -1].astype(np.float32),
                                           "Species": self.data[:, -5].astype(np.str),
-                                          "Probability": self.data[:, -4].astype(np.float32),
-                                          "MSE": mse.astype(np.float32)})
-                if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
-                    self.data.rename(columns={"Species": "Correctness"}, inplace=True)
+                                          "Probability": self.data[:, -4].astype(np.float32)})
+                names = ["X", "Y", "Z"]
+                # TODO: Add case when it's not 3D
             else:
-                pass
-            self.__make_plots()
+                if self.settings.fc_type == "Accuri":
+                    available_channels = SettingsOptions.vis_channels_accuri.value
+                    channels_to_use = self.settings.vis_channels_accuri
+                else:
+                    available_channels = SettingsOptions.vis_channels_cytoflex.value
+                    channels_to_use = self.settings.vis_channels_cytoflex
+                indexes = [available_channels.index(channel) for channel in channels_to_use]
+                names = [available_channels[index] for index in indexes]
+                self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
+                                          names[1]: self.data[:, indexes[1]].astype(np.float32),
+                                          names[2]: self.data[:, indexes[2]].astype(np.float32),
+                                          "Species": self.data[:, -2].astype(np.str),
+                                          "Probability": self.data[:, -1].astype(np.float32)})
+            self.data["MSE"] = mse.astype(np.float32)
+            if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
+                self.data.rename(columns={"Species": "Correctness"}, inplace=True)
+            self.__make_plots(cols=names)
             self.children()[3].setText("MSE")
             self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 

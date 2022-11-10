@@ -111,7 +111,8 @@ class SettingsWindow(Widget):
 
     def __update_layouts(self, combobox: ComboBox, text: TextEdit) -> None:
         model_name = combobox.currentText()
-        text.setText(self.model_info.get_readable(model=combobox.name, name=model_name))
+        if model_name != "":
+            text.setText(self.model_info.get_readable(model=combobox.name, name=model_name))
 
     def set_values_from_config(self) -> None:
         self.combo_boxes_content["model"] = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
@@ -145,7 +146,7 @@ class SettingsWindow(Widget):
             if isinstance(child, ComboBox):
                 setattr(self.settings, child.name, child.currentText())
             elif isinstance(child, CheckableComboBox):
-                if child.name != "vis_channels" or child.name != "cols_to_drop":
+                if child.name != "vis_channels" and child.name != "cols_to_drop":
                     setattr(self.settings, child.name, child.get_check_items())
                 else:
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
