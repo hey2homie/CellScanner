@@ -14,8 +14,13 @@ class SettingsOptions(Enum):
     vis_type = ["UMAP", "Channels"]
     vis_dims = ["2", "3"]
     vis_channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
-                           "Width", "Time"]
+                           "Width"]
     vis_channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
+                             "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
+                             "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width"]
+    cols_to_drop_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
+                           "Width", "Time"]
+    cols_to_drop_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
                              "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
                              "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width",
                              "Time"]
@@ -113,7 +118,7 @@ class ModelsInfo:
         return int(self.classifiers[self.classifier_name][2]["labels_shape"])
 
     def get_readable(self, model: str, name: str) -> str:
-        if model == "classifier":
+        if model == "classifier" or model == "model":
             labels_map = self.classifiers[name][1]["labels_map"]    # TODO: Use method get_labels_map
             labels = [v for _, v in labels_map.items()]
             return ", ".join(labels)
