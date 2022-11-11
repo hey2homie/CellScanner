@@ -168,7 +168,6 @@ class ClassificationModel(AppModels):
         elif self.settings.lr_scheduler == "Exponential Decay":
             scheduler = [LearningRateScheduler(__exp_decay)]
         self.compile_model()
-        # TODO: Here change window to training results
         self.train_model(self.name, training_set, test_set, scheduler=scheduler)
         self.model_info.save_info()
 
@@ -210,10 +209,7 @@ class ClassificationModel(AppModels):
 
     def __diagnostic_plots(self, true_labels, predicted_labels) -> list:
         vis = MplVisualization(output_path=self.settings.results)
-        vis.diagnostics(true_labels=true_labels, predicted_labels=predicted_labels)
-        labels = []  # TODO: Change to numpy array
-        for i in range(0, len(true_labels)):
-            labels.append("Correct") if true_labels[i] == predicted_labels[i] else labels.append("Incorrect")
+        labels = vis.diagnostics(true_labels=true_labels, predicted_labels=predicted_labels)
         return labels
 
     def run_diagnostics(self) -> np.ndarray:

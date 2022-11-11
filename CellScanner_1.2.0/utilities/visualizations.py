@@ -46,66 +46,93 @@ class MplVisualization:
         self.n_classes = None
 
     def save_predictions_visualizations(self, inputs: dict, settings: Settings) -> None:
-        """
-        Saves visualisations of the predictions.
-        Args:
-            inputs (dict): Dictionary of inputs.
-            settings (Settings): Settings object.
-        Returns:
-            None
-        """
-        if settings.fc_type == "Accuri":
-            channels_use = settings.vis_channels_accuri
-            indexes = [SettingsOptions.vis_channels_accuri.value.index(channel) for channel in channels_use]
+        if settings.vis_type == "Channels":
+            if settings.fc_type == "Accuri":
+                channels_use = settings.vis_channels_accuri
+                indexes = [SettingsOptions.vis_channels_accuri.value.index(channel) for channel in channels_use]
+            else:
+                channels_use = settings.vis_channels_cytoflex
+                indexes = [SettingsOptions.vis_channels_cytoflex.value.index(channel) for channel in channels_use]
         else:
-            channels_use = settings.vis_channels_cytoflex
-            indexes = [SettingsOptions.vis_channels_cytoflex.value.index(channel) for channel in channels_use]
+            indexes = [-3, -2, -1]
+            channels_use = ["X", "Y", "Z"]
+
         for file, data in inputs.items():
+            data = data[0]
+            if settings.vis_type == "Channels":
+                labels = np.unique(data[:, -2])
+            else:
+                labels = np.unique(data[:, -5])
             file = file.split("/")[-1].split(".")[0]
             fig = plt.figure(figsize=(7, 7))
-            data = data[0]
-            # TODO: Add option to do 2D scatter
-            ax = fig.add_subplot(projection="3d")
+            cmap = plt.cm.jet
+            if settings.vis_dims == "3":
+                ax = fig.add_subplot(projection="3d")
+                bounds = np.linspace(0, len(labels), len(labels) + 1)
+                norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+            else:
+                ax = fig.add_subplot()
             col_x = list(map(float, data[:, indexes[0]]))
             col_y = list(map(float, data[:, indexes[1]]))
-            col_z = list(map(float, data[:, indexes[2]]))
-            labels = np.unique(data[:, -2])
-            cmap = plt.cm.jet
             cmaplist = [cmap(i) for i in range(cmap.N)]
-            cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
-            bounds = np.linspace(0, len(labels), len(labels) + 1)
-            norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+            cmap = cmap.from_list("Custom cmap", cmaplist, cmap.N)
             colors = cmap(np.linspace(0, 1, len(labels)))
             for i, (label, color) in enumerate(zip(labels, colors), 1):
-                indexes_plot = np.where(data[:, -2] == label)
+                if settings.vis_type == "Channels":
+                    indexes_plot = np.where(data[:, -2] == label)
+                else:
+                    indexes_plot = np.where(data[:, -5] == label)
                 axis_x = np.take(col_x, indexes_plot, axis=0)
                 axis_y = np.take(col_y, indexes_plot, axis=0)
-                axis_z = np.take(col_z, indexes_plot, axis=0)
-                ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
+                if settings.vis_dims == "3":
+                    col_z = list(map(float, data[:, indexes[2]]))
+                    axis_z = np.take(col_z, indexes_plot, axis=0)
+                    ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
+                else:
+                    ax.scatter(axis_x, axis_y, c=color, label=label)
             ax.set_xlabel(channels_use[0])
             ax.set_ylabel(channels_use[1])
-            ax.set_zlabel(channels_use[2])
+            if settings.vis_dims == "3":
+                ax.set_zlabel(channels_use[2])
+                ax.set_title("3D Scatter Plot of " + file)
+            else:
+                ax.set_title("2D Scatter Plot of " + file)
             ax.legend()
-            ax.set_title("3D Scatter Plot of " + file)
             plt.savefig(self.output_path + file + "_" "predictions.png")
 
-    def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+    def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
+        if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:
+            raise ValueError("Number of classes in true and predicted labels are not equal")
+            # Bug when there is true labels are more than predicted labels and vice versa
+            # Is there a way around?
         self.classes = np.unique(true_labels)
         self.n_classes = self.classes.shape[0]
         true_labels_binarized = label_binarize(true_labels, classes=self.classes)
         predicted_labels_binarized = label_binarize(predicted_labels, classes=self.classes)
         self.classes = {i: bacteria_class for i, bacteria_class in enumerate(self.classes)}
-        # TODO: Bug when there is true labels are more than predicted labels and vice versa (see line 114)
+        labels_compared = self.__pie(true_labels, predicted_labels)
         self.__roc(true_labels_binarized, predicted_labels_binarized)
         self.__precision_recall(true_labels_binarized, predicted_labels_binarized)
         self.__confusion_matrices(true_labels_binarized, predicted_labels_binarized)
         self.__aggregated_matrix(true_labels, predicted_labels)
+        return labels_compared
+
+    def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
+        # TODO: Change to numpy array
+        labels = []
+        for i in range(0, len(true_labels)):
+            labels.append("Correct") if true_labels[i] == predicted_labels[i] else labels.append("Incorrect")
+        _, count_labels = np.unique(labels, return_counts=True)
+        plt.pie(count_labels, labels=["Correct", "Incorrect"])
+        plt.title("Pie Chart of Prediction Accuracy")
+        plt.savefig(self.output_path + "pie.png")
+        return labels
 
     def __roc(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
-        for i in range(self.n_classes):     # HERE
+        for i in range(self.n_classes):
             fpr[i], tpr[i], _ = roc_curve(true_labels[:, i], predicted_labels[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
         all_fpr = np.unique(np.concatenate([fpr[i] for i in range(self.n_classes)]))
@@ -127,7 +154,7 @@ class MplVisualization:
         plt.ylabel("True Positive Rate")
         plt.title("ROC Curves")
         plt.legend(loc="lower right")
-        plt.savefig(self.output_path + "/roc.png")
+        plt.savefig(self.output_path + "roc.png")
 
     def __precision_recall(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
         precision = dict()
@@ -186,9 +213,3 @@ class MplVisualization:
         _, _ = plot_confusion_matrix(conf_mat=cm, class_names=list(self.classes.values()), figsize=(7, 8))
         plt.title("Confusion Matrix")
         plt.savefig(self.output_path + "confusion_matrix.png")
-
-
-class TrainingVisualization:
-    # Ideas: custom callback to draw matplotlib plot or plotly (preferably plotly) after each epoch. Otherwise, consider
-    # using a tensorboard callback.
-    pass

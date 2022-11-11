@@ -91,13 +91,19 @@ class ResultsClassification(Widget):
         if self.inputs:
             self.data, mse = self.inputs[value][0], self.inputs[value][1]
             if self.settings.vis_type == "UMAP":
-                self.data = pd.DataFrame({"X": self.data[:, -3].astype(np.float32),
-                                          "Y": self.data[:, -2].astype(np.float32),
-                                          "Z": self.data[:, -1].astype(np.float32),
-                                          "Species": self.data[:, -5].astype(np.str),
-                                          "Probability": self.data[:, -4].astype(np.float32)})
-                names = ["X", "Y", "Z"]
-                # TODO: Add case when it's not 3D
+                if self.settings.vis_dims == "3":
+                    self.data = pd.DataFrame({"X": self.data[:, -3].astype(np.float32),
+                                              "Y": self.data[:, -2].astype(np.float32),
+                                              "Z": self.data[:, -1].astype(np.float32),
+                                              "Species": self.data[:, -5].astype(np.str),
+                                              "Probability": self.data[:, -4].astype(np.float32)})
+                    names = ["X", "Y", "Z"]
+                else:
+                    self.data = pd.DataFrame({"X": self.data[:, -1].astype(np.float32),
+                                              "Y": self.data[:, -2].astype(np.float32),
+                                              "Species": self.data[:, -4].astype(np.str),
+                                              "Probability": self.data[:, -3].astype(np.float32)})
+                    names = ["X", "Y"]
             else:
                 if self.settings.fc_type == "Accuri":
                     available_channels = SettingsOptions.vis_channels_accuri.value
@@ -107,11 +113,18 @@ class ResultsClassification(Widget):
                     channels_to_use = self.settings.vis_channels_cytoflex
                 indexes = [available_channels.index(channel) for channel in channels_to_use]
                 names = [available_channels[index] for index in indexes]
-                self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
-                                          names[1]: self.data[:, indexes[1]].astype(np.float32),
-                                          names[2]: self.data[:, indexes[2]].astype(np.float32),
-                                          "Species": self.data[:, -2].astype(np.str),
-                                          "Probability": self.data[:, -1].astype(np.float32)})
+                if self.settings.vis_dims == "3":
+                    self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
+                                              names[1]: self.data[:, indexes[1]].astype(np.float32),
+                                              names[2]: self.data[:, indexes[2]].astype(np.float32),
+                                              "Species": self.data[:, -2].astype(np.str),
+                                              "Probability": self.data[:, -1].astype(np.float32)})
+                else:
+                    self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
+                                              names[1]: self.data[:, indexes[1]].astype(np.float32),
+                                              "Species": self.data[:, -2].astype(np.str),
+                                              "Probability": self.data[:, -1].astype(np.float32)})
+            # TODO: The whole different type/dims is super ugly. Refactor this.
             self.data["MSE"] = mse.astype(np.float32)
             if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
                 self.data.rename(columns={"Species": "Correctness"}, inplace=True)
