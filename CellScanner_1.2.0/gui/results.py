@@ -11,7 +11,7 @@ import pandas as pd
 from utilities.visualizations import MplVisualization
 from utilities.settings import SettingsOptions
 
-from gui.widgets import Widget, Button, FileBox
+from gui.widgets import Widget, Button, FileBox, InputDialog
 
 
 class ResultsClassification(Widget):
@@ -41,8 +41,8 @@ class ResultsClassification(Widget):
         self.file_box = FileBox(obj_name="select", geometry=[46, 43, 180, 450], parent=self)
         Button(text="Menu", obj_name="standard", geometry=[46, 518, 180, 60], parent=self)
         Button(text="MSE", obj_name="standard", geometry=[254, 518, 180, 60], parent=self)
-        Button(text="Save Data", obj_name="standard", geometry=[462, 518, 180, 60], parent=self)
-        Button(text="Save Visuals", obj_name="standard", geometry=[669, 518, 180, 60], parent=self)
+        Button(text="Adjust MSE", obj_name="standard", geometry=[462, 518, 180, 60], parent=self)
+        Button(text="Save Results", obj_name="standard", geometry=[669, 518, 180, 60], parent=self)
 
     def __make_plots(self, cols: list) -> None:
         if self.settings.vis_dims == "3":
@@ -140,12 +140,20 @@ class ResultsClassification(Widget):
             self.children()[3].setText("MSE")
             self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
-    def save_data(self) -> None:
-        pass    # TODO: Implement method
+    def adjust_mse(self) -> None:
+        mse, entered = InputDialog.getText(self, "", "Enter new MSE threshold")
+        if entered:
+            try:
+                self.settings.mse_threshold = float(mse)
+                self.graph_mse_err.update_shapes(dict(y0=self.settings.mse_threshold, y1=self.settings.mse_threshold))
+                self.browser.setHtml(self.graph_mse_err.to_html(include_plotlyjs="cdn"))
+            except ValueError:
+                print("Invalid MSE threshold")
 
-    def save_visuals(self) -> None:
+    def save_results(self) -> None:
         visualizations = MplVisualization(output_path=self.settings.results)
         visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
+        # TODO: Save data here
 
     def clear(self) -> None:
         self.inputs = None

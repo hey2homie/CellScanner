@@ -58,7 +58,7 @@ class MplVisualization:
             channels_use = ["X", "Y", "Z"]
 
         for file, data in inputs.items():
-            data = data[0]
+            data, mse = data[0], data[1]
             if settings.vis_type == "Channels":
                 labels = np.unique(data[:, -2])
             else:
@@ -72,12 +72,15 @@ class MplVisualization:
                 norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             else:
                 ax = fig.add_subplot()
+            mse_fig = plt.figure(figsize=(7, 7))
+            ax_mse = mse_fig.add_subplot()
             col_x = list(map(float, data[:, indexes[0]]))
             col_y = list(map(float, data[:, indexes[1]]))
+            mse = list(mse)
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmap = cmap.from_list("Custom cmap", cmaplist, cmap.N)
             colors = cmap(np.linspace(0, 1, len(labels)))
-            for i, (label, color) in enumerate(zip(labels, colors), 1):
+            for _, (label, color) in enumerate(zip(labels, colors), 1):
                 if settings.vis_type == "Channels":
                     indexes_plot = np.where(data[:, -2] == label)
                 else:
@@ -90,15 +93,24 @@ class MplVisualization:
                     ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
                 else:
                     ax.scatter(axis_x, axis_y, c=color, label=label)
+                mse_axis_y = np.take(mse, indexes_plot, axis=0)
+                ax_mse.scatter(indexes_plot, mse_axis_y, c=color, label=label)
             ax.set_xlabel(channels_use[0])
             ax.set_ylabel(channels_use[1])
+            ax_mse.set_xlabel("Index")
+            ax_mse.set_ylabel("MSE")
+            ax_mse.axhline(y=settings.mse_threshold, color="r", linestyle="-")
+            ax_mse.set_title("Reconstruction Error for " + file)
             if settings.vis_dims == "3":
                 ax.set_zlabel(channels_use[2])
                 ax.set_title("3D Scatter Plot of " + file)
             else:
                 ax.set_title("2D Scatter Plot of " + file)
             ax.legend()
-            plt.savefig(self.output_path + file + "_" "predictions.png")
+            ax_mse.legend()
+            fig.savefig(self.output_path + file + "_" + "predictions.png")
+            mse_fig.savefig(self.output_path + file + "_" + "mse.png")
+            plt.close()
 
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:

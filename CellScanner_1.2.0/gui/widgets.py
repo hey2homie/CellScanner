@@ -1,10 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
-    QFrame, QComboBox, QLineEdit, QTextEdit, QCheckBox
+    QFrame, QComboBox, QLineEdit, QTextEdit, QCheckBox, QInputDialog
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QPainter
-
-
-# TODO: Add button with pop-up window with info about selected model. See above
 
 
 class Widget(QWidget):
@@ -133,10 +130,10 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: set_output_directory(windows))
         elif self.text() == "MSE" or self.text() == "Predictions":
             self.clicked.connect(lambda: windows.currentWidget().change_plot(plot_type=self.text()))
-        elif self.text() == "Save Data":
-            self.clicked.connect(lambda: windows.currentWidget().save_data())
-        elif self.text() == "Save Visuals":
-            self.clicked.connect(lambda: windows.currentWidget().save_visuals())
+        elif self.text() == "Adjust MSE":
+            self.clicked.connect(lambda: windows.currentWidget().adjust_mse())
+        elif self.text() == "Save Results":
+            self.clicked.connect(lambda: windows.currentWidget().save_results())
 
     def eventFilter(self, object, event) -> bool:
         classifier = self.parent().children()[-2]
@@ -146,6 +143,12 @@ class Button(QPushButton, Widget):
         elif event.type() == QEvent.Type.HoverLeave:
             autoencoder.hide() if self.name == "ae" else classifier.hide()
         return False
+
+
+class InputDialog(QInputDialog, Widget):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super(InputDialog, self).__init__(*args, **kwargs)
 
 
 class CheckBox(QCheckBox, Widget):
