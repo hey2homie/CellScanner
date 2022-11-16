@@ -32,7 +32,7 @@ class FilePreparation:
             return pd.read_excel(file)
 
     def __drop_columns(self, dataframe: pd.DataFrame) -> tuple or bool:
-        if self.training:   # TODO: The case should be only when training autoencoder
+        if self.training:
             cols_to_drop = self.settings.cols_to_drop_accuri if self.settings.fc_type == "Accuri" else \
                 self.settings.cols_to_drop_cytoflex
         else:
@@ -56,6 +56,7 @@ class FilePreparation:
         return dataframe
 
     def __gate(self, dataframe: pd.DataFrame) -> tuple:
+        mse = None
         if self.settings.gating_type == "Autoencoder" and not self.training:
             from utilities.classification_utils import AutoEncoder
             self.models_info.autoencoder_name = self.settings.autoencoder
@@ -65,8 +66,7 @@ class FilePreparation:
             predicted = autoencoder.predict(dataframe)
             mse = np.mean(np.power(dataframe - predicted, 2), axis=1)
         else:
-            # raise NotImplementedError
-            pass
+            raise NotImplementedError
         return np.array(dataframe), mse
 
     @staticmethod
@@ -99,13 +99,13 @@ class FilePreparation:
     def get_aggregated(self) -> tuple:
         self.get_prepared_inputs()
         features = list(np.unique(list(self.features.values())))
-        data, labels = [], []
+        data, labels, mse = [], [], []
         for key, value in self.data.items():
             data.append(value[0])
-            labels.append(value[1])
-        data, labels = np.array(data)[-1], np.array(labels)[-1]
-        return data, labels, features
-        # TODO: Do I need features?
+            mse.append(value[1])
+            labels.append(value[2])
+        data, mse, labels = np.concatenate(data, axis=0), np.concatenate(mse, axis=0), np.concatenate(labels, axis=0)
+        return data, mse, labels, features, self.files_list
 
 
 class DataPreparation:
@@ -119,13 +119,14 @@ class DataPreparation:
     def __map_labels(self) -> None:
         self.labels, self.labels_ints = np.unique(self.labels, return_inverse=True)
         self.labels_ints = tf.convert_to_tensor(self.labels_ints, dtype=tf.float32)
+        self.labels_ints = tf.keras.utils.to_categorical(self.labels_ints, num_classes=len(self.labels))
 
     def create_datasets(self) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
         if self.labels is not None:
             self.__map_labels()
             dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.labels_ints))
         else:
-            dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.dataframe))  # Case for autoencoders
+            dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.dataframe))
         dataset = dataset.shuffle(self.dataframe.shape[0])
         dataset_length = sum(1 for _ in dataset)
         training_length = np.rint(dataset_length * 0.8)

@@ -7,7 +7,8 @@ from keras.models import Model, Sequential
 from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPooling1D, Dense, Activation, Flatten, \
     Dropout
 from keras.optimizers import Adam
-from keras.losses import SparseCategoricalCrossentropy
+from keras.losses import CategoricalCrossentropy
+from keras.metrics import Accuracy, Precision, TruePositives, FalsePositives
 from keras.activations import elu
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard
 from sklearn.cluster import KMeans
@@ -16,6 +17,8 @@ from sklearn.mixture import GaussianMixture
 from utilities.data_preparation import FilePreparation, DataPreparation
 from utilities.visualizations import MplVisualization, UmapVisualization
 from utilities.settings import Settings, ModelsInfo
+
+import matplotlib.pyplot as plt
 
 
 def set_tf_hardware(hardware: str) -> None:
@@ -92,8 +95,8 @@ class AppModels(ABC):
         self.__build_model()
         if self.model_type == "classifier":
             self.model.compile(optimizer=Adam(float(self.settings.lr)),
-                               loss=SparseCategoricalCrossentropy(from_logits=True),
-                               metrics=["accuracy"])
+                               loss=CategoricalCrossentropy(from_logits=True),
+                               metrics=[Accuracy(), Precision(), TruePositives(), FalsePositives()])
         else:
             self.model.compile(optimizer=Adam(1e-3), loss="mse")
 
@@ -113,12 +116,15 @@ class AppModels(ABC):
                     scheduler: list = None) -> None:
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
         checkpoint = ModelCheckpoint(folder + name, save_best_only=True)
-        tf_board = TensorBoard(log_dir=".tflogs/" + self.name, histogram_freq=1, write_graph=False, write_images=False,
+        tf_board = TensorBoard(log_dir="training_logs/" + self.name, histogram_freq=1, write_graph=False, write_images=False,
                                update_freq="epoch")
         callbacks = [checkpoint, tf_board]
         if scheduler:
             callbacks.extend(scheduler)
         self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs, callbacks=callbacks)
+        with open("training_logs/" + name + "/files_used.txt", "w") as file:
+            for f in self.files:
+                file.write(f + "\n")
 
     def get_model(self) -> Model:
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
@@ -156,10 +162,10 @@ class ClassificationModel(AppModels):
             k = 0.1
             return self.settings.lr * np.exp(-k * epoch)
 
-        files, labels, _ = self.file_prep.get_aggregated()
-        training_set, test_set, labels_map = self.create_training_files(files, labels)
-        num_features, num_classes = files.shape[1], np.unique(labels).shape[0]
-        self.model_info.add_classifier(self.name, labels_map, num_features, num_classes)
+        data, _, labels, _, files = self.file_prep.get_aggregated()
+        training_set, test_set, labels_map = self.create_training_files(data, labels)
+        num_features, num_classes = data.shape[1], np.unique(labels).shape[0]
+        self.model_info.add_classifier(self.name, labels_map, num_features, num_classes, files)
         scheduler = None
         if self.settings.lr_scheduler == "Time Decay":
             scheduler = [LearningRateScheduler(__time_based_decay)]
@@ -171,12 +177,12 @@ class ClassificationModel(AppModels):
         self.train_model(self.name, training_set, test_set, scheduler=scheduler)
         self.model_info.save_info()
 
-    def __make_predictions(self, dataframe: np.ndarray, diagnostics: bool = False) -> np.ndarray:
+    def __make_predictions(self, dataframe: np.ndarray = None, diagnostics: bool = False) -> np.ndarray:
         self.get_model()
         labels_map = self.model_info.get_labels_map()
         labels, probability_pred = [], []
         if diagnostics:
-            dataframe, true_labels = self.file_prep.get_aggregated()
+            dataframe, mse, true_labels, _, _ = self.file_prep.get_aggregated()
         predictions = self.model.predict(dataframe)
         embeddings = None
         if self.settings.vis_type == "UMAP":
@@ -187,7 +193,7 @@ class ClassificationModel(AppModels):
             probabilities = tf.nn.softmax(pred)
             probability_pred.append(tf.get_static_value(max(probabilities)))
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
-        labels = np.asarray(list(map(lambda x: labels_map[x], labels)))  # TODO: Change to numpy map (?)
+        labels = np.asarray(list(map(lambda x: labels_map[x], labels)))
         probability_pred = np.asarray(probability_pred)
         dataframe = np.append(dataframe, labels[:, None], axis=1)
         dataframe = np.append(dataframe, probability_pred[:, None], axis=1)
@@ -195,6 +201,7 @@ class ClassificationModel(AppModels):
             dataframe = np.append(dataframe, embeddings, axis=1)
             return dataframe
         try:
+            dataframe = np.append(dataframe, mse[:, None], axis=1)
             dataframe = np.append(dataframe, true_labels[:, None], axis=1)
         except NameError:
             pass
@@ -203,43 +210,50 @@ class ClassificationModel(AppModels):
     def run_classification(self) -> dict:
         outputs = self.file_prep.get_prepared_inputs()
         for key, data in outputs.items():
-            # TODO: Make small pop-up window that shows progress
             outputs[key] = [self.__make_predictions(data[0]), data[1]]
         return outputs
 
     def __diagnostic_plots(self, true_labels, predicted_labels) -> list:
-        vis = MplVisualization(output_path=self.settings.results)
-        labels = vis.diagnostics(true_labels=true_labels, predicted_labels=predicted_labels)
+        vis = MplVisualization(self.settings.results)
+        labels = vis.diagnostics(true_labels, predicted_labels)
         return labels
 
-    def run_diagnostics(self) -> np.ndarray:
+    def run_diagnostics(self) -> dict:
         outputs = self.__make_predictions(diagnostics=True)
-        true_labels = outputs[:, -2]
-        labels_compared = self.__diagnostic_plots(true_labels=true_labels, predicted_labels=outputs[:, -1])
+        predicted_labels = outputs[:, -4]
+        true_labels = outputs[:, -1]
+        labels_compared = self.__diagnostic_plots(true_labels, predicted_labels)
         outputs[:, -1] = labels_compared
+        outputs = {"diagnostics": [outputs, outputs[:, -2]]}
         return outputs
 
 
 class AutoEncoder(AppModels):
 
     def __calculate_num_clusters(self) -> int:
-        dataframe, _, _ = self.file_prep.get_aggregated()
+        dataframe = self.file_prep.get_aggregated()[0]
         gms_per_k = [GaussianMixture(n_components=k, n_init=10, random_state=42).fit(dataframe) for k in range(1, 11)]
-        aics = np.log10(np.abs(np.array([model.aic(dataframe) for model in gms_per_k])))
-        delta_aics = np.diff(aics)
-        optimal_k = np.argmax(delta_aics < 0.005) + 1  # TODO: Make this (0.005) hyperparameter adn store in settings
-        # TODO: Alright, raising warning window with scores (better with elbow plot) is better
+        aics = np.array([model.aic(dataframe) for model in gms_per_k])
+        plt.plot(aics, marker="p")
+        plt.show()
+        while True:
+            try:
+                optimal_k = int(input("Enter the number of clusters: "))
+                break
+            except ValueError:
+                print("Please enter a valid number")
+        plt.close()
         return optimal_k
 
     def __get_clusters(self, optimal_k: int) -> tuple:
-        dataframe, labels, features = self.file_prep.get_aggregated()
+        dataframe, _, labels, features, _ = self.file_prep.get_aggregated()
         kmeans = KMeans(n_clusters=optimal_k)
         y_predicted = kmeans.fit_predict(dataframe)
         clusters_content_labels = {}
         clusters_content = {}
-        for i in np.unique(y_predicted):
-            clusters_content_labels[i] = np.take(labels, np.where(y_predicted == i))
-            clusters_content[i] = np.take(dataframe, np.where(y_predicted == i))
+        for i in np.unique(labels):
+            clusters_content_labels[i] = np.take(labels, np.where(labels == i))
+            clusters_content[i] = np.take(dataframe, np.where(labels == i))
         clusters_blank_count = {}
         for key, value in clusters_content_labels.items():
             types, counts = np.unique(value, return_counts=True)
@@ -251,7 +265,7 @@ class AutoEncoder(AppModels):
     def __remove_blank_clusters(dataframe, y_predicted, clusters_blank_count: dict) -> tuple:
         indexes = []
         for key, value in clusters_blank_count.items():
-            if clusters_blank_count[key] > 10:  # TODO: Make this (10) a hyperparameter
+            if clusters_blank_count[key] > 10:
                 indexes.extend(np.where(y_predicted == key)[0].tolist())
         dataframe = np.delete(dataframe, indexes, axis=0)
         y_predicted = np.delete(y_predicted, indexes, axis=0)
@@ -280,7 +294,6 @@ class AutoEncoder(AppModels):
         for key, values in data_clustered_clean.items():
             if key != firs_key:
                 data_clean = np.append(data_clean, values, axis=0)
-        np.save(f"autoencoders/.clean_data/{name}_clean", data_clean)
         return data_clean
 
     def run_training(self) -> None:
@@ -290,7 +303,6 @@ class AutoEncoder(AppModels):
                                                                                   clusters_blank_count)
         data_clean = self.__remove_outliers(dataframe, y_predicted, remaining_clusters, self.name)
         feature_shape = data_clean.shape[1]
-        print(columns)
         self.model_info.add_autoencoder(name=self.name, fc_type=self.settings.fc_type, features=columns,
                                         num_features=feature_shape)
         training_set, test_set = self.create_training_files(data_clean)

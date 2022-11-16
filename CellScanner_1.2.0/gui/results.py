@@ -76,9 +76,8 @@ class ResultsClassification(Widget):
     def set_inputs(self, inputs: dict = None) -> None:
         if self.file_box.count() == 0:
             self.file_box.hide()
-            self.children()[3].hide()
-            self.children()[4].hide()
-            self.widget_graph.setGeometry(*[46, 43, 808, 450])
+            self.children()[5].hide()
+            self.widget_graph.setGeometry(46, 43, 808, 450)
             pass
         if inputs:
             self.inputs = inputs
@@ -117,14 +116,11 @@ class ResultsClassification(Widget):
                     self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
                                               names[1]: self.data[:, indexes[1]].astype(np.float32),
                                               names[2]: self.data[:, indexes[2]].astype(np.float32),
-                                              "Species": self.data[:, -2].astype(np.str),
-                                              "Probability": self.data[:, -1].astype(np.float32)})
+                                              "Species": self.data[:, -2].astype(np.str)})
                 else:
                     self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
                                               names[1]: self.data[:, indexes[1]].astype(np.float32),
-                                              "Species": self.data[:, -2].astype(np.str),
-                                              "Probability": self.data[:, -1].astype(np.float32)})
-            # TODO: The whole different type/dims is super ugly. Refactor this.
+                                              "Species": self.data[:, -2].astype(np.str)})
             self.data["MSE"] = mse.astype(np.float32)
             if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
                 self.data.rename(columns={"Species": "Correctness"}, inplace=True)
@@ -162,7 +158,9 @@ class ResultsClassification(Widget):
         self.graph_mse_err = None
         self.file_box.clear()
         self.browser.setHtml("")
-
+        self.file_box.show()
+        self.children()[5].show()
+        self.widget_graph.setGeometry(254, 43, 595, 450)
 
 class ResultsTraining(Widget):
 
@@ -183,7 +181,7 @@ class ResultsTraining(Widget):
         Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
 
     def run_tf_board(self, name: str) -> None:
-        self.tf_board = subprocess.Popen(["tensorboard", "--logdir=.tflogs/" + name, "--port=6006"])
+        self.tf_board = subprocess.Popen(["tensorboard", "--logdir=training_logs/" + name, "--port=6006"])
         self.browser.load(QUrl("http://localhost:6006/#scalars"))
         self.browser.reload()
         self.widget_browser.layout().addWidget(self.browser)

@@ -100,7 +100,6 @@ class ModelsInfo:
         self.classifiers = {model: self.classifiers[model] for model in classifiers}
         self.autoencoders = {model: self.autoencoders[model] for model in autoencoders}
         self.save_info()
-        # TODO: Remove .npy files from .clean_data if ae is removed
 
     def get_features_ae(self) -> list:
         return self.autoencoders[self.autoencoder_name][1]["features"]
@@ -126,11 +125,13 @@ class ModelsInfo:
             features = self.autoencoders[name][1]["features"]
             return ", ".join(features)
 
-    def add_classifier(self, name: str, labels_map: dict, features_shape: int, labels_shape: int) -> None:
+    def add_classifier(self, name: str, labels_map: dict, features_shape: int, labels_shape: int,
+                       files_used: list) -> None:
         labels_map = {key: str(value) for key, value in labels_map.items()}
+        files_used = [file.split("/")[-1] for file in files_used]
         self.classifier_name = name
         self.classifiers[name] = [{"features_shape": features_shape}, {"labels_map": labels_map},
-                                  {"labels_shape": labels_shape}]
+                                  {"labels_shape": labels_shape}, {"files_used": files_used}]
 
     def add_autoencoder(self, name: str, fc_type: str, features: list, num_features: int) -> None:
         self.autoencoder_name = name

@@ -17,9 +17,9 @@ def main():
     MainWindow(stack=stack)
     FileSelector(stack=stack)
     ResultsClassification(stack=stack)
+    ResultsTraining(stack=stack)
     SettingsWindow(stack=stack)
     AboutWindow(stack=stack)
-    ResultsTraining(stack=stack)    # TODO: Put it next to other results and change indexes in other files
     stack.setCurrentIndex(0)
     stack.show()
     sys.exit(app.exec())

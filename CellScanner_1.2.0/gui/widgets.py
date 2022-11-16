@@ -90,11 +90,11 @@ class Button(QPushButton, Widget):
                 if isinstance(widget, EditLine) or isinstance(widget, DropBox):
                     widget.clear()
             if self.text() == "Menu":
-                if stack.currentIndex() == 3:
-                    stack.widget(3).set_values_from_config()
+                if stack.currentIndex() == 4:
+                    stack.widget(4).set_values_from_config()
                     stack.setGeometry(*[300, 300, 895, 600])
-                elif stack.currentIndex() == 5:
-                    stack.widget(5).tf_board.kill()
+                elif stack.currentIndex() == 3:
+                    stack.widget(3).tf_board.kill()
                 elif stack.currentIndex() == 2:
                     stack.widget(2).clear()
                 stack.setCurrentIndex(0)
@@ -103,12 +103,12 @@ class Button(QPushButton, Widget):
         def set_output_directory(stack: QStackedWidget) -> None:
             directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
             if directory:
-                for widget in stack.widget(3).children():
+                for widget in stack.widget(4).children():
                     if widget.name == "results":
                         widget.setText(directory)
 
         def show_settings(stack: QStackedWidget) -> None:
-            stack.setCurrentIndex(3)
+            stack.setCurrentIndex(4)
             stack.currentWidget().center()
             stack.setGeometry(*[300, 300, 895, 700])
             stack.center()
@@ -119,7 +119,7 @@ class Button(QPushButton, Widget):
         elif self.text() == "Settings":
             self.clicked.connect(lambda: show_settings(windows))
         elif self.text() == "Help":
-            self.clicked.connect(lambda: windows.setCurrentIndex(4))
+            self.clicked.connect(lambda: windows.setCurrentIndex(5))
         elif self.text() == "Menu" or self.text() == "Clear Data":
             self.clicked.connect(lambda: clear(windows))
         elif self.text() == "Predict" or self.text() == "Diagnose" or self.text() == "Train":

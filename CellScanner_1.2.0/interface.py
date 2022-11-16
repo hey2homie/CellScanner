@@ -34,6 +34,7 @@ def run_prediction():
             while True:
                 model_name = input("Enter model name: ")
                 if model_name:
+                    model_name = model_name
                     break
         if arguments.model:
             training_type = arguments.model[0]
@@ -44,8 +45,9 @@ def run_prediction():
                     break
         if model_name and training_type:
             if training_type == "classifier":
+                model_name += ".h5"
                 model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                            model_type="classifier", name=model_name, training=True)
+                                            model_type="classifier", name=model_name)
 
             else:
                 model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
@@ -91,26 +93,17 @@ def check_path(path):
 
 def main():
     parser = argparse.ArgumentParser(description="CellScanner")
-
     parser.add_argument("command", type=str, help="Command to run",
                         choices=["predict", "train", "validate", "settings"])
-
-    # General
     parser.add_argument("-p", "--path", type=str, help="Path to files to process")
-
-    # Settings
     parser.add_argument("-s", "--show", dest="show", action="store_true", help="Show settings")
     parser.add_argument("-c", "--change", type=str, help="Change settings",
                         choices=list(vars(settings).keys()), nargs=1)
-
-    # Retraining
     parser.add_argument("-m", "--model", type=str, help="What type of model to train",
                         choices=["autoencoder", "classifier"], nargs=1)
     parser.add_argument("-n", "--name", type=str, help="Name of the model", nargs=1)
-
     global arguments
     arguments = parser.parse_args()
-
     if arguments.command == "predict" or arguments.command == "train" or arguments.command == "validate":
         run_prediction()
     elif arguments.command == "settings":

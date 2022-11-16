@@ -13,7 +13,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
 
-from utilities.settings import Settings, SettingsOptions
+from utilities.settings import Settings, SettingsOptions, ModelsInfo
 
 
 class UmapVisualization:
@@ -115,8 +115,6 @@ class MplVisualization:
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:
             raise ValueError("Number of classes in true and predicted labels are not equal")
-            # Bug when there is true labels are more than predicted labels and vice versa
-            # Is there a way around?
         self.classes = np.unique(true_labels)
         self.n_classes = self.classes.shape[0]
         true_labels_binarized = label_binarize(true_labels, classes=self.classes)
@@ -130,7 +128,6 @@ class MplVisualization:
         return labels_compared
 
     def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
-        # TODO: Change to numpy array
         labels = []
         for i in range(0, len(true_labels)):
             labels.append("Correct") if true_labels[i] == predicted_labels[i] else labels.append("Incorrect")
