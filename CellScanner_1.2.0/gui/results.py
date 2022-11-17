@@ -1,4 +1,7 @@
+import os
 import subprocess
+import yaml
+from datetime import datetime
 
 from PyQt6 import QtWebEngineWidgets
 from PyQt6.QtCore import QUrl
@@ -44,27 +47,6 @@ class ResultsClassification(Widget):
         Button(text="Adjust MSE", obj_name="standard", geometry=[462, 518, 180, 60], parent=self)
         Button(text="Save Results", obj_name="standard", geometry=[669, 518, 180, 60], parent=self)
 
-    def __make_plots(self, cols: list) -> None:
-        if self.settings.vis_dims == "3":
-            try:
-                self.graph_outputs = scatter_3d(self.data, x=cols[0], y=cols[1], z=cols[2], color="Species")
-            except ValueError:
-                self.graph_outputs = scatter_3d(self.data, x=cols[0], y=cols[1], z=cols[2], color="Correctness")
-        else:
-            try:
-                self.graph_outputs = scatter(self.data, x=cols[0], y=cols[1], color="Species")
-            except ValueError:
-                self.graph_outputs = scatter(self.data, x=cols[0], y=cols[1], color="Correctness")
-        self.graph_outputs.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                                                     font=dict(family="Avenir", size=8, color="black")))
-        try:
-            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
-        except ValueError:
-            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Correctness")
-        self.graph_mse_err.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                                                     font=dict(family="Avenir", size=8, color="black")))
-        self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
-
     def __configurate_widgets(self) -> None:
         self.layout_graph.setContentsMargins(0, 0, 0, 0)
         self.file_box.currentItemChanged.connect(lambda: self.set_inputs())
@@ -73,7 +55,7 @@ class ResultsClassification(Widget):
         self.file_box.addItems(items)
         self.file_box.setCurrentItem(self.file_box.item(0))
 
-    def set_inputs(self, inputs: dict = None) -> None:
+    def set_inputs(self, inputs: dict = None, diagnostics: bool = False) -> None:
         if self.file_box.count() == 0:
             self.file_box.hide()
             self.children()[5].hide()
@@ -88,21 +70,11 @@ class ResultsClassification(Widget):
             except AttributeError:
                 return None
         if self.inputs:
-            self.data, mse = self.inputs[value][0], self.inputs[value][1]
+            current_item = self.inputs[value]
+            color = "Species"
             if self.settings.vis_type == "UMAP":
-                if self.settings.vis_dims == "3":
-                    self.data = pd.DataFrame({"X": self.data[:, -3].astype(np.float32),
-                                              "Y": self.data[:, -2].astype(np.float32),
-                                              "Z": self.data[:, -1].astype(np.float32),
-                                              "Species": self.data[:, -5].astype(np.str),
-                                              "Probability": self.data[:, -4].astype(np.float32)})
-                    names = ["X", "Y", "Z"]
-                else:
-                    self.data = pd.DataFrame({"X": self.data[:, -1].astype(np.float32),
-                                              "Y": self.data[:, -2].astype(np.float32),
-                                              "Species": self.data[:, -4].astype(np.str),
-                                              "Probability": self.data[:, -3].astype(np.float32)})
-                    names = ["X", "Y"]
+                names = ["X", "Y", "Z"]
+                dataframe = current_item["embeddings"]
             else:
                 if self.settings.fc_type == "Accuri":
                     available_channels = SettingsOptions.vis_channels_accuri.value
@@ -112,19 +84,24 @@ class ResultsClassification(Widget):
                     channels_to_use = self.settings.vis_channels_cytoflex
                 indexes = [available_channels.index(channel) for channel in channels_to_use]
                 names = [available_channels[index] for index in indexes]
-                if self.settings.vis_dims == "3":
-                    self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
-                                              names[1]: self.data[:, indexes[1]].astype(np.float32),
-                                              names[2]: self.data[:, indexes[2]].astype(np.float32),
-                                              "Species": self.data[:, -2].astype(np.str)})
-                else:
-                    self.data = pd.DataFrame({names[0]: self.data[:, indexes[0]].astype(np.float32),
-                                              names[1]: self.data[:, indexes[1]].astype(np.float32),
-                                              "Species": self.data[:, -2].astype(np.str)})
-            self.data["MSE"] = mse.astype(np.float32)
-            if any(species in self.data["Species"].unique() for species in ["Correct", "Incorrect"]):
-                self.data.rename(columns={"Species": "Correctness"}, inplace=True)
-            self.__make_plots(cols=names)
+                dataframe = [current_item["data"][:, index] for index in indexes]
+            self.data = pd.DataFrame({names[0]: dataframe[0].astype(np.float32), names[1]: dataframe[1]})
+            self.data["Species"] = current_item["labels"].astype(str)
+            if diagnostics:
+                self.data["Correctness"] = current_item["labels_compared"].astype(str)
+                color = "Correctness"
+            self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
+            if self.settings.vis_dims == "3":
+                self.data[names[2]] = dataframe[2].astype(np.float32)
+                self.graph_outputs = scatter_3d(self.data, x=names[0], y=names[1], z=names[2], color="Species")
+            self.data["Probability"] = current_item["probability_pred"].astype(np.float32)
+            self.data["MSE"] = current_item["mse"].astype(np.float32)
+            layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                                 font=dict(family="Avenir", size=8, color="black"))
+            self.graph_outputs.update_layout(legend=layout_legend)
+            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color=color)
+            self.graph_mse_err.update_layout(legend=layout_legend)
+            self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
             self.children()[3].setText("MSE")
             self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
@@ -147,9 +124,8 @@ class ResultsClassification(Widget):
                 print("Invalid MSE threshold")
 
     def save_results(self) -> None:
-        visualizations = MplVisualization(output_path=self.settings.results)
-        visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
-        # TODO: Save data here
+        visualizations = MplVisualization(self.settings.results)
+        visualizations.save_predictions_visualizations(self.inputs, self.settings)
 
     def clear(self) -> None:
         self.inputs = None
@@ -161,6 +137,7 @@ class ResultsClassification(Widget):
         self.file_box.show()
         self.children()[5].show()
         self.widget_graph.setGeometry(254, 43, 595, 450)
+
 
 class ResultsTraining(Widget):
 

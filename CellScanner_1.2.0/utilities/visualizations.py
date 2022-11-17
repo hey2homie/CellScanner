@@ -3,6 +3,7 @@ from itertools import cycle
 from datetime import datetime
 
 import numpy as np
+import yaml
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score, \
     PrecisionRecallDisplay, ConfusionMatrixDisplay
 from sklearn.preprocessing import label_binarize
@@ -13,7 +14,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
 
-from utilities.settings import Settings, SettingsOptions, ModelsInfo
+from utilities.settings import Settings, SettingsOptions
 
 
 class UmapVisualization:
@@ -46,49 +47,42 @@ class MplVisualization:
         self.n_classes = None
 
     def save_predictions_visualizations(self, inputs: dict, settings: Settings) -> None:
-        if settings.vis_type == "Channels":
-            if settings.fc_type == "Accuri":
-                channels_use = settings.vis_channels_accuri
-                indexes = [SettingsOptions.vis_channels_accuri.value.index(channel) for channel in channels_use]
-            else:
-                channels_use = settings.vis_channels_cytoflex
-                indexes = [SettingsOptions.vis_channels_cytoflex.value.index(channel) for channel in channels_use]
-        else:
-            indexes = [-3, -2, -1]
-            channels_use = ["X", "Y", "Z"]
-
         for file, data in inputs.items():
-            data, mse = data[0], data[1]
-            if settings.vis_type == "Channels":
-                labels = np.unique(data[:, -2])
-            else:
-                labels = np.unique(data[:, -5])
+            dataframe, mse, labels = data["data"], data["mse"], data["labels"]
+            labels_uniq = np.unique(labels)
             file = file.split("/")[-1].split(".")[0]
+            if settings.vis_type == "Channels":
+                if settings.fc_type == "Accuri":
+                    channels_use = settings.vis_channels_accuri
+                    indexes = [SettingsOptions.vis_channels_accuri.value.index(channel) for channel in channels_use]
+                else:
+                    channels_use = settings.vis_channels_cytoflex
+                    indexes = [SettingsOptions.vis_channels_cytoflex.value.index(channel) for channel in channels_use]
+            else:
+                dataframe = data["embeddings"]
+                channels_use = ["X", "Y", "Z"]
             fig = plt.figure(figsize=(7, 7))
             cmap = plt.cm.jet
             if settings.vis_dims == "3":
                 ax = fig.add_subplot(projection="3d")
-                bounds = np.linspace(0, len(labels), len(labels) + 1)
+                bounds = np.linspace(0, len(labels_uniq), len(labels_uniq) + 1)
                 norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             else:
                 ax = fig.add_subplot()
             mse_fig = plt.figure(figsize=(7, 7))
             ax_mse = mse_fig.add_subplot()
-            col_x = list(map(float, data[:, indexes[0]]))
-            col_y = list(map(float, data[:, indexes[1]]))
+            col_x = list(map(float, dataframe[:, indexes[0]]))
+            col_y = list(map(float, dataframe[:, indexes[1]]))
             mse = list(mse)
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmap = cmap.from_list("Custom cmap", cmaplist, cmap.N)
-            colors = cmap(np.linspace(0, 1, len(labels)))
-            for _, (label, color) in enumerate(zip(labels, colors), 1):
-                if settings.vis_type == "Channels":
-                    indexes_plot = np.where(data[:, -2] == label)
-                else:
-                    indexes_plot = np.where(data[:, -5] == label)
+            colors = cmap(np.linspace(0, 1, len(labels_uniq)))
+            for _, (label, color) in enumerate(zip(labels_uniq, colors), 1):
+                indexes_plot = np.where(labels == label)
                 axis_x = np.take(col_x, indexes_plot, axis=0)
                 axis_y = np.take(col_y, indexes_plot, axis=0)
                 if settings.vis_dims == "3":
-                    col_z = list(map(float, data[:, indexes[2]]))
+                    col_z = list(map(float, dataframe[:, indexes[2]]))
                     axis_z = np.take(col_z, indexes_plot, axis=0)
                     ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
                 else:
@@ -111,6 +105,32 @@ class MplVisualization:
             fig.savefig(self.output_path + file + "_" + "predictions.png")
             mse_fig.savefig(self.output_path + file + "_" + "mse.png")
             plt.close()
+        with open(self.output_path + "cell_counts.txt", "w") as file:
+            output = {}
+            for key, value in inputs.items():
+                output[key] = {}
+                labels = inputs[key]["labels"]
+                mse = inputs[key]["mse"]
+                probs = inputs[key]["probability_pred"]
+                labels_count = np.unique(labels, return_counts=True)
+                labels_count = dict(zip(labels_count[0], labels_count[1]))
+                all_cells = sum(labels_count.values())
+                for label in labels_count.keys():
+                    indices = np.where(labels == label)[0]
+                    mse_label = mse[indices]
+                    blanks_label = len(np.where(mse_label > settings.mse_threshold)[0])
+                    probs_label = probs[indices]
+                    probs_label = len(np.where(probs_label > 0.95)[0])
+                    percentage_cells = np.round(labels_count[label] / all_cells * 100, 2)
+                    percentage_blanks = np.round(blanks_label / len(indices) * 100, 2)
+                    percentage_probs = np.round(probs_label / len(indices) * 100, 2)
+                    output[key][str(label)] = {"Number of cells": int(labels_count[label]),
+                                               "Percentage": float(percentage_cells),
+                                               "Number of blanks": int(blanks_label),
+                                               "Percentage of blanks": float(percentage_blanks),
+                                               "Number of high probability": int(probs_label),
+                                               "Percentage of high probability": float(percentage_probs)}
+            yaml.dump(output, file, default_flow_style=False, sort_keys=False)
 
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:

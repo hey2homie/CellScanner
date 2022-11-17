@@ -62,7 +62,7 @@ class FileSelector(Widget):
                 else:
                     outputs = model.run_classification()
                     self.stack.widget(2).set_items(files)
-                self.stack.widget(2).set_inputs(outputs)
+                self.stack.widget(2).set_inputs(outputs, diagnostics)
                 self.stack.setCurrentIndex(2)
         else:
             MessageBox.about(self, "Warning", "Files are not selected")

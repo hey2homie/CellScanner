@@ -16,7 +16,7 @@ from sklearn.mixture import GaussianMixture
 
 from utilities.data_preparation import FilePreparation, DataPreparation
 from utilities.visualizations import MplVisualization, UmapVisualization
-from utilities.settings import Settings, ModelsInfo
+from utilities.settings import Settings, SettingsOptions, ModelsInfo
 
 import matplotlib.pyplot as plt
 
@@ -162,9 +162,10 @@ class ClassificationModel(AppModels):
             k = 0.1
             return self.settings.lr * np.exp(-k * epoch)
 
-        data, _, labels, _, files = self.file_prep.get_aggregated()
-        training_set, test_set, labels_map = self.create_training_files(data, labels)
-        num_features, num_classes = data.shape[1], np.unique(labels).shape[0]
+        data = self.file_prep.get_aggregated()
+        dataframe, labels, files = data["data"], data["labels"], data["files"]
+        training_set, test_set, labels_map = self.create_training_files(dataframe, labels)
+        num_features, num_classes = dataframe.shape[1], np.unique(labels).shape[0]
         self.model_info.add_classifier(self.name, labels_map, num_features, num_classes, files)
         scheduler = None
         if self.settings.lr_scheduler == "Time Decay":
@@ -177,40 +178,36 @@ class ClassificationModel(AppModels):
         self.train_model(self.name, training_set, test_set, scheduler=scheduler)
         self.model_info.save_info()
 
-    def __make_predictions(self, dataframe: np.ndarray = None, diagnostics: bool = False) -> np.ndarray:
+    def __make_predictions(self, dataframe: np.ndarray = None, mse: np.ndarray = None,
+                           diagnostics: bool = False) -> dict:
+        results = {"mse": mse}
         self.get_model()
         labels_map = self.model_info.get_labels_map()
         labels, probability_pred = [], []
         if diagnostics:
-            dataframe, mse, true_labels, _, _ = self.file_prep.get_aggregated()
+            data = self.file_prep.get_aggregated()
+            dataframe = data["data"]
+            results["mse"], results["true_labels"] = data["mse"], data["labels"]
+        results["data"] = dataframe
         predictions = self.model.predict(dataframe)
         embeddings = None
         if self.settings.vis_type == "UMAP":
             umap = UmapVisualization(data=dataframe, num_cores=int(self.settings.num_umap_cores),
                                      dims=int(self.settings.vis_dims))
             embeddings = umap.get_embeddings()
+            results["embeddings"] = embeddings
         for _, pred in enumerate(predictions):
             probabilities = tf.nn.softmax(pred)
             probability_pred.append(tf.get_static_value(max(probabilities)))
             labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
-        labels = np.asarray(list(map(lambda x: labels_map[x], labels)))
-        probability_pred = np.asarray(probability_pred)
-        dataframe = np.append(dataframe, labels[:, None], axis=1)
-        dataframe = np.append(dataframe, probability_pred[:, None], axis=1)
-        if embeddings is not None:
-            dataframe = np.append(dataframe, embeddings, axis=1)
-            return dataframe
-        try:
-            dataframe = np.append(dataframe, mse[:, None], axis=1)
-            dataframe = np.append(dataframe, true_labels[:, None], axis=1)
-        except NameError:
-            pass
-        return dataframe
+        results["labels"] = np.asarray(list(map(lambda x: labels_map[x], labels)))
+        results["probability_pred"] = np.asarray(probability_pred)
+        return results
 
     def run_classification(self) -> dict:
         outputs = self.file_prep.get_prepared_inputs()
         for key, data in outputs.items():
-            outputs[key] = [self.__make_predictions(data[0]), data[1]]
+            outputs[key] = self.__make_predictions(data["data"], data["mse"])
         return outputs
 
     def __diagnostic_plots(self, true_labels, predicted_labels) -> list:
@@ -220,18 +217,17 @@ class ClassificationModel(AppModels):
 
     def run_diagnostics(self) -> dict:
         outputs = self.__make_predictions(diagnostics=True)
-        predicted_labels = outputs[:, -4]
-        true_labels = outputs[:, -1]
+        predicted_labels = outputs["labels"]
+        true_labels = outputs["true_labels"]
         labels_compared = self.__diagnostic_plots(true_labels, predicted_labels)
-        outputs[:, -1] = labels_compared
-        outputs = {"diagnostics": [outputs, outputs[:, -2]]}
+        outputs["labels_compared"] = labels_compared
         return outputs
 
 
 class AutoEncoder(AppModels):
 
     def __calculate_num_clusters(self) -> int:
-        dataframe = self.file_prep.get_aggregated()[0]
+        dataframe = self.file_prep.get_aggregated()["data"]
         gms_per_k = [GaussianMixture(n_components=k, n_init=10, random_state=42).fit(dataframe) for k in range(1, 11)]
         aics = np.array([model.aic(dataframe) for model in gms_per_k])
         plt.plot(aics, marker="p")
@@ -246,7 +242,8 @@ class AutoEncoder(AppModels):
         return optimal_k
 
     def __get_clusters(self, optimal_k: int) -> tuple:
-        dataframe, _, labels, features, _ = self.file_prep.get_aggregated()
+        data = self.file_prep.get_aggregated()
+        dataframe, labels, features = data["data"], data["labels"], data["features"]
         kmeans = KMeans(n_clusters=optimal_k)
         y_predicted = kmeans.fit_predict(dataframe)
         clusters_content_labels = {}

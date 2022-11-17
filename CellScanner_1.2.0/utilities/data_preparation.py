@@ -93,19 +93,19 @@ class FilePreparation:
                 self.data.pop(file)
             self.data[file] = self.__scale(self.data[file])
             self.data[file], mse = self.__gate(self.data[file])
-            self.data[file] = [self.data[file], mse, self.__add_labels(file=file, dataframe=self.data[file])]
+            self.data[file] = {"data": self.data[file], "mse": mse, "labels": self.__add_labels(file, self.data[file])}
         return self.data
 
-    def get_aggregated(self) -> tuple:
+    def get_aggregated(self) -> dict:
         self.get_prepared_inputs()
         features = list(np.unique(list(self.features.values())))
         data, labels, mse = [], [], []
         for key, value in self.data.items():
-            data.append(value[0])
-            mse.append(value[1])
-            labels.append(value[2])
+            data.append(value["data"])
+            mse.append(value["mse"])
+            labels.append(value["labels"])
         data, mse, labels = np.concatenate(data, axis=0), np.concatenate(mse, axis=0), np.concatenate(labels, axis=0)
-        return data, mse, labels, features, self.files_list
+        return {"data": data, "mse": mse, "labels": labels, "features": features, "files": self.files_list}
 
 
 class DataPreparation:
