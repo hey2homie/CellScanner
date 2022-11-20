@@ -3,6 +3,14 @@ from utilities.settings import Settings, ModelsInfo
 
 
 class MainWindow(Widget):
+    """
+    Attributes:
+    ----------
+    settings: Settings
+        Settings object.
+    models_info: ModelsInfo
+        ModelsInfo object.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -27,12 +35,3 @@ class MainWindow(Widget):
         Button(text="Tool\nDiagnostics", obj_name="main", geometry=[367, 91, 166, 425], parent=self)
         Button(text="Settings", obj_name="main", geometry=[537, 91, 166, 425], parent=self)
         Button(text="Help", obj_name="main", geometry=[707, 91, 166, 425], parent=self)
-
-    def get_settings(self):
-        return self.settings
-
-    def get_settings(self):
-        return self.settings
-
-    def get_models_info(self):
-        return self.models_info

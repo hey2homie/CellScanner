@@ -1,7 +1,4 @@
-import os
 import subprocess
-import yaml
-from datetime import datetime
 
 from PyQt6 import QtWebEngineWidgets
 from PyQt6.QtCore import QUrl
@@ -18,6 +15,26 @@ from gui.widgets import Widget, Button, FileBox, InputDialog
 
 
 class ResultsClassification(Widget):
+    """
+    Attributes:
+    ----------
+    inputs: dict
+        Dictionary containing the pairs file : results of predictions.
+    data: pd.DataFrame
+        Dataframe containing the results of the predictions for the current file
+    widget_graph: Widget
+        Widgets containing web browser to display the plots.
+    graph_outputs: plotly.graph_objects.Figure
+        Plotly figure containing the predictions for the current file.
+    graph_mse_err: plotly.graph_objects.Figure
+        Plotly figure containing the reconstruction error for the current file.
+    layout_graph: QGridLayout
+        Layout of the widget_graph.
+    browser: QtWebEngineWidgets.QWebEngineView
+        Web browser to display the plots.
+    file_box: FileBox
+        File box to select the file to display.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -52,10 +69,27 @@ class ResultsClassification(Widget):
         self.file_box.currentItemChanged.connect(lambda: self.set_inputs())
 
     def set_items(self, items: list) -> None:
+        """
+        Adds items in the file box.
+        Args:
+            items (list): List of items to add.
+        Returns:
+            None.
+        """
         self.file_box.addItems(items)
         self.file_box.setCurrentItem(self.file_box.item(0))
 
     def set_inputs(self, inputs: dict = None, diagnostics: bool = False) -> None:
+        """
+        Sets the inputs used to display plots and save the information. After running predictions, the default plot to
+        display will be the one at index 0 in the file box. After setting the inputs, for default constructs the Pandas
+        dataframe which is used as the source for the plots. Changing files in the file box updates this dataframe.
+        Args:
+            inputs (dict): Dictionary containing the pairs file : results of predictions.
+            diagnostics (bool, optional): If True, the color scheme displays correct/incorrect predictions.
+        Returns:
+            None.
+        """
         if self.file_box.count() == 0:
             self.file_box.hide()
             self.children()[5].hide()
@@ -106,6 +140,13 @@ class ResultsClassification(Widget):
             self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
     def change_plot(self, plot_type: str) -> None:
+        """
+        Displays the selected plot type in the browser.
+        Args:
+            plot_type (str): The plot type to display.
+        Returns:
+            None.
+        """
         if plot_type == "MSE":
             self.browser.setHtml(self.graph_mse_err.to_html(include_plotlyjs="cdn"))
             self.children()[3].setText("Predictions")
@@ -114,6 +155,11 @@ class ResultsClassification(Widget):
             self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
     def adjust_mse(self) -> None:
+        """
+        Adjusts the MSE threshold and saves the new value to the settings class.
+        Returns:
+            None.
+        """
         mse, entered = InputDialog.getText(self, "", "Enter new MSE threshold")
         if entered:
             try:
@@ -124,10 +170,20 @@ class ResultsClassification(Widget):
                 print("Invalid MSE threshold")
 
     def save_results(self) -> None:
+        """
+        Saves the results of the predictions for each file.
+        Returns:
+            None.
+        """
         visualizations = MplVisualization(self.settings.results)
         visualizations.save_predictions_visualizations(self.inputs, self.settings)
 
     def clear(self) -> None:
+        """
+        Clears the content of class.
+        Returns:
+            None.
+        """
         self.inputs = None
         self.data = None
         self.graph_outputs = None
@@ -140,6 +196,12 @@ class ResultsClassification(Widget):
 
 
 class ResultsTraining(Widget):
+    """
+    Attributes:
+    ----------
+    tf_board: subprocess.Popen
+        Tensorboard process running separately from the application.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -158,6 +220,13 @@ class ResultsTraining(Widget):
         Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
 
     def run_tf_board(self, name: str) -> None:
+        """
+        Runs TensorBoard as a separate process.
+        Args:
+            name: Name of the TensorBoard log directory.
+        Returns:
+            None.
+        """
         self.tf_board = subprocess.Popen(["tensorboard", "--logdir=training_logs/" + name, "--port=6006"])
         self.browser.load(QUrl("http://localhost:6006/#scalars"))
         self.browser.reload()

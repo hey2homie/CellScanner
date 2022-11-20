@@ -18,35 +18,90 @@ from utilities.settings import Settings, SettingsOptions
 
 
 class UmapVisualization:
+    """
+    UmapVisualization class is used for the dimensionality reduction of the data using UMAP algorithm. Embeddings are
+    used for the visualization of the data in the 2D or 3D space.
+
+    Attributes:
+    ----------
+    data: np.ndarray
+        Data to be reduced.
+    num_cores: int
+        Number of CPU cores to be used for the reduction.
+    dims: int
+        Number of dimensions to be reduced to.
+    """
 
     def __init__(self, data: np.ndarray, num_cores: int, dims: int) -> None:
+        """
+        Args:
+            data (np.ndarray): Data to be reduced.
+            num_cores (int): Number of CPU cores to be used for the reduction.
+            dims (int): Number of dimensions to be reduced to.
+        Returns:
+            None.
+        """
         self.data = data
         self.num_cores = num_cores
         self.dims = dims
         self.embeddings = self.__reduction()
 
     def __reduction(self) -> np.ndarray:
+        """
+        Performs the dimensionality reduction and returns the embeddings.
+        Returns:
+            np.ndarray: Embeddings of the data.
+        """
         reducer = umap.UMAP(n_components=self.dims, n_neighbors=25, min_dist=0.1, metric="euclidean",
                             n_jobs=self.num_cores)
         fitted = reducer.fit_transform(self.data)
         return fitted
 
-    def get_embeddings(self) -> np.ndarray:
-        return self.embeddings
-
 
 class MplVisualization:
+    """
+    MplVisualization class is used for the visualization of the data using matplotlib library. Visualizations are done
+    for both prediction results and for the model diagnostics. First includes scatter plot of the embeddings or
+    channels, as well as the scatter plot of the reconstruction error if the autoencoder is used. For the diagnostics,
+    ROC curve, precision-recall curve, confusion matrix, aggregated confusion matrix, and pie chart of overall accuracy
+    are plotted.
+
+    Attributes:
+    ----------
+    output_path: str
+        Path to the output directory.
+    colors: cycle
+        Colors for the plots. Assumes that no more than 10 classes are present in the data.
+    classes: np.ndarray
+        Array of classes.
+    n_classes: int
+        Number of classes.
+    """
 
     def __init__(self, output_path: str) -> None:
+        """
+        Assumes that no more than 10 classes are present in the data.
+        Args:
+            output_path (str): Path to the output directory.
+        Returns:
+            None.
+        """
         self.output_path = output_path + "/" + datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + "/"
         os.mkdir(self.output_path)
-        # 10 colors should be enough, I guess
         self.colors = cycle(["aqua", "darkorange", "cornflowerblue", "goldenrod", "rosybrown", "lightgreen",
                              "lightgray", "orchid", "darkmagenta", "olive"])
         self.classes = None
         self.n_classes = None
 
     def save_predictions_visualizations(self, inputs: dict, settings: Settings) -> None:
+        """
+        Saves the visualizations of the prediction results.
+        Args:
+            inputs (dict): Dictionary containing the results of prediction.
+            settings (Settings): Settings object containing the settings of the model.
+        Returns:
+            None.
+        """
         for file, data in inputs.items():
             dataframe, mse, labels = data["data"], data["mse"], data["labels"]
             labels_uniq = np.unique(labels)
@@ -105,6 +160,7 @@ class MplVisualization:
             fig.savefig(self.output_path + file + "_" + "predictions.png")
             mse_fig.savefig(self.output_path + file + "_" + "mse.png")
             plt.close()
+        # This is temporal solution and not included in the documentation
         with open(self.output_path + "cell_counts.txt", "w") as file:
             output = {}
             for key, value in inputs.items():
@@ -132,7 +188,21 @@ class MplVisualization:
                                                "Percentage of high probability": float(percentage_probs)}
             yaml.dump(output, file, default_flow_style=False, sort_keys=False)
 
-    def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
+    def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> np.ndarray:
+        """
+        Calculates diagnostic metrics for the model.
+        Args:
+            true_labels (np.ndarray): True labels.
+            predicted_labels (np.ndarray): Predicted labels.
+        Returns:
+            labels_compared (np.ndarray): Array of correct/incorrect labels.
+        See Also:
+            :meth:`__pie`.
+            :meth:`__roc`.
+            :meth:`__precision_recall`.
+            :meth:`__confusion_matrices`.
+            :meth:`__aggregated_matrix`.
+        """
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:
             raise ValueError("Number of classes in true and predicted labels are not equal")
         self.classes = np.unique(true_labels)
@@ -147,7 +217,15 @@ class MplVisualization:
         self.__aggregated_matrix(true_labels, predicted_labels)
         return labels_compared
 
-    def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> list:
+    def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> np.ndarray:
+        """
+        Creates pie chart of correct/incorrect labels.
+        Args:
+            true_labels (np.ndarray): True labels.
+            predicted_labels (np.ndarray): Predicted labels.
+        Returns:
+            labels_compared (np.ndarray): Array of correct/incorrect labels.
+        """
         labels = []
         for i in range(0, len(true_labels)):
             labels.append("Correct") if true_labels[i] == predicted_labels[i] else labels.append("Incorrect")
@@ -155,9 +233,17 @@ class MplVisualization:
         plt.pie(count_labels, labels=["Correct", "Incorrect"])
         plt.title("Pie Chart of Prediction Accuracy")
         plt.savefig(self.output_path + "pie.png")
-        return labels
+        return np.ndarray(labels)
 
     def __roc(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Creates plot of ROC curves.
+        Args:
+            true_labels (np.ndarray): True labels.
+            predicted_labels (np.ndarray): Predicted labels.
+        Returns:
+            None.
+        """
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
@@ -186,6 +272,14 @@ class MplVisualization:
         plt.savefig(self.output_path + "roc.png")
 
     def __precision_recall(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Creates plot of precision-recall curves.
+        Args:
+            true_labels (np.ndarray): True labels.
+            predicted_labels (np.ndarray): Predicted labels.
+        Returns:
+            None.
+        """
         precision = dict()
         recall = dict()
         average_precision = dict()
@@ -215,6 +309,14 @@ class MplVisualization:
         plt.savefig(self.output_path + "precision_recall.png")
 
     def __confusion_matrices(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+        """
+        Creates confusion matrices for each class.
+        Args:
+            true_labels (np.ndarray): True labels.
+            predicted_labels (np.ndarray): Predicted labels.
+        Returns:
+            None.
+        """
         rows = int(np.floor(np.sqrt(self.n_classes)))
         cols = int(np.ceil(self.n_classes / rows))
         fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
@@ -236,6 +338,14 @@ class MplVisualization:
         plt.savefig(self.output_path + "confusion_matrices.png")
 
     def __aggregated_matrix(self, true_labels: np.ndarray, predicted_labels: np.ndarray):
+        """
+        Creates aggregated confusion matrix.
+        Args:
+            true_labels (np.ndarray): True labels.
+            predicted_labels (np.ndarray): Predicted labels.
+        Returns:
+            None.
+        """
         _, true_labels = np.unique(true_labels, return_inverse=True)
         _, predicted_labels = np.unique(predicted_labels, return_inverse=True)
         cm = confusion_matrix(y_target=true_labels, y_predicted=predicted_labels, binary=False)

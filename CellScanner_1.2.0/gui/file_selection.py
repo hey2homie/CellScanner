@@ -4,14 +4,25 @@ from gui.widgets import Widget, DropBox, Button, EditLine, CheckBox, MessageBox
 
 
 class FileSelector(Widget):
+    """
+    Attributes:
+    ----------
+    action: str
+        Action to be performed after adding files. Can be
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.title = "Choose Files"
-        self.action = False
+        self.action = None
 
     def __init_ui(self):
-        self.setWindowTitle(self.title)
+        """
+        Initialize widgets. Depending on the action, different widgets are added like check-box for autoencoder or field
+        for the model name.
+        Returns:
+            None.
+        """
+        self.setWindowTitle("File Selection")
         DropBox(obj_name="drop", geometry=[46, 43, 808, 450], parent=self)
         Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
         Button(text="Clear Data", obj_name="standard", geometry=[349, 518, 200, 60], parent=self)
@@ -26,14 +37,26 @@ class FileSelector(Widget):
             self.children()[3].setText("Train")
 
     def set_action(self, action: str) -> None:
+        """
+        Set action to be performed after adding files. Reset widgets if action is changed.
+        Args:
+            action (str): Action to be performed after adding files. Can be "Prediction", "Training".
+        Returns:
+            None.
+        """
         self.action = action
         [children.setParent(None) for children in self.children()]
         self.__init_ui()
 
     def run_action(self) -> None:
+        """
+        Depending on what button was pressed, run the appropriate action after adding files.
+        Returns:
+            None.
+        """
         if self.children()[0].count() != 0:
-            settings = self.stack.widget(0).get_settings()
-            models_info = self.stack.widget(0).get_models_info()
+            settings = self.stack.widget(0).settings
+            models_info = self.stack.widget(0).models_info
             if self.action == "Training":
                 model_name = self.children()[4].text()
                 if model_name == "":

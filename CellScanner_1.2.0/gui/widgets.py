@@ -5,10 +5,29 @@ from PyQt6.QtGui import QPainter
 
 
 class Widget(QWidget):
+    """
+    Base class for all the widgets. Inherits everything from QWidget and has additional attributes and methods. Allows
+    to set the object name, geometry and name at the initialization.
+
+    Attributes:
+    ----------
+    name: str
+        Name of the widget used to differentiate widgets to fill in the settings attributes.
+    stack: QStackedWidget
+        Stack of widgets used to switch between them.
+    """
+
     name = None
     stack = None
 
     def __init__(self, obj_name: str = None, geometry: list = None, name: str = None, stack=None, *args, **kwargs):
+        """
+        Args:
+            obj_name (str, optional): Object name of the widget. Defaults to None.
+            geometry (list, optional): Geometry of the widget. Defaults to None.
+            name (str, optional): Name of the widget. Defaults to None.
+            stack (QStackedWidget, optional): Stack of widgets. Defaults to None.
+        """
         super().__init__(*args, **kwargs)
         self.center()
         if obj_name:
@@ -33,12 +52,18 @@ class Widget(QWidget):
 
 
 class Stack(QStackedWidget, Widget):
+    """
+    Stack of widgets. Inherits from QStackedWidget and Widget.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(Stack, self).__init__(*args, **kwargs)
 
 
 class Label(QLabel, Widget):
+    """
+    Label widget. Inherits from QLabel and Widget. Additionally, depending on the object name, it sets the alignment.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(Label, self).__init__(*args, **kwargs)
@@ -47,12 +72,18 @@ class Label(QLabel, Widget):
 
 
 class MessageBox(QMessageBox, Widget):
+    """
+    Message box widget. Inherits from QMessageBox and Widget.
+    """
 
     def __init__(self, *args, **kwargs):
         super(MessageBox, self).__init__(*args, **kwargs)
 
 
 class HLine(QFrame, Widget):
+    """
+    Horizontal line widget. Inherits from QFrame and Widget.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(HLine, self).__init__(*args, **kwargs)
@@ -60,18 +91,28 @@ class HLine(QFrame, Widget):
 
 
 class TextEdit(QTextEdit, Widget):
+    """
+    Text edit widget. Inherits from QTextEdit and Widget.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(TextEdit, self).__init__(*args, **kwargs)
 
 
 class EditLine(QLineEdit, Widget):
+    """
+    Edit line widget. Inherits from QLineEdit and Widget.
+    """
 
     def __init__(self, *args, **kwargs):
         super(EditLine, self).__init__(*args, **kwargs)
 
 
 class Button(QPushButton, Widget):
+    """
+    Button widget. Inherits from QPushButton and Widget. Additionally, it adds an action to the button depending on the
+    text of the button.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(Button, self).__init__(*args, **kwargs)
@@ -80,12 +121,31 @@ class Button(QPushButton, Widget):
             self.installEventFilter(self)
 
     def __add_action(self) -> None:
+        """
+        Adds an action to the button depending on the text of the button.
+        Returns:
+            None.
+        """
 
         def show_file_selection_window(stack: QStackedWidget) -> None:
+            """
+            Shows the file selection window. After each "Menu", resets the action to be performed in the window.
+            Args:
+                stack (QStackedWidget): Stack of widgets.
+            Returns:
+                None.
+            """
             stack.widget(1).set_action(self.text())
             stack.setCurrentIndex(1)
 
         def clear(stack: QStackedWidget) -> None:
+            """
+            Clears content of some widgets. In case of result window for training model, kills running tfboard.
+            Args:
+                stack (QStackedWidget): Stack of widgets.
+            Returns:
+                None.
+            """
             for widget in stack.widget(1).children():
                 if isinstance(widget, EditLine) or isinstance(widget, DropBox):
                     widget.clear()
@@ -101,6 +161,13 @@ class Button(QPushButton, Widget):
                 stack.center()
 
         def set_output_directory(stack: QStackedWidget) -> None:
+            """
+            Sets the output directory by raising a file selection window.
+            Args:
+                stack (QStackedWidget): Stack of widgets.
+            Returns:
+                None.
+            """
             directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
             if directory:
                 for widget in stack.widget(4).children():
@@ -108,6 +175,13 @@ class Button(QPushButton, Widget):
                         widget.setText(directory)
 
         def show_settings(stack: QStackedWidget) -> None:
+            """
+            Shows the settings window.
+            Args:
+                stack (QStackedWidget): Stack of widgets.
+            Returns:
+                None.
+            """
             stack.setCurrentIndex(4)
             stack.currentWidget().center()
             stack.setGeometry(*[300, 300, 895, 700])
@@ -136,6 +210,9 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: windows.currentWidget().save_results())
 
     def eventFilter(self, object, event) -> bool:
+        """
+        Event filter for the help button. It shows a message box with the model metadata.
+        """
         classifier = self.parent().children()[-2]
         autoencoder = self.parent().children()[-1]
         if event.type() == QEvent.Type.HoverEnter:
@@ -146,47 +223,85 @@ class Button(QPushButton, Widget):
 
 
 class InputDialog(QInputDialog, Widget):
+    """
+    Input dialog widget. Inherits from QInputDialog and Widget.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(InputDialog, self).__init__(*args, **kwargs)
 
 
 class CheckBox(QCheckBox, Widget):
+    """
+    Check box widget. Inherits from QCheckBox and Widget.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(CheckBox, self).__init__(*args, **kwargs)
 
 
 class ComboBox(QComboBox, Widget):
+    """
+    Combo box widget. Inherits from QComboBox and Widget.
+    """
 
     def __init__(self, *args, **kwargs):
         super(QComboBox, self).__init__(*args, **kwargs)
 
 
 class CheckableComboBox(QComboBox, Widget):
+    """
+    Checkable combo box widget. Inherits from QComboBox and Widget. Allows to select multiple items.
+    """
     # TODO: Add painting with number of chose items in the box
     def __init__(self, *args, **kwargs) -> None:
         super(QComboBox, self).__init__(*args, **kwargs)
         self.view().pressed.connect(self.__handle_item_pressed)
 
-    def __handle_item_pressed(self, index) -> None:
+    def __handle_item_pressed(self, index: int) -> None:
+        """
+        Handles the pressed event of the combo box.
+        Args:
+            index (int): Index of the item.
+        Returns:
+            None.
+        """
         item = self.model().itemFromIndex(index)
         if item.checkState() == Qt.CheckState.Checked:
             item.setCheckState(Qt.CheckState.Unchecked)
         else:
             item.setCheckState(Qt.CheckState.Checked)
 
-    def __item_checked(self, index) -> bool:
+    def __item_checked(self, index: int) -> bool:
+        """
+        Returns whether the item at the given index is checked.
+        Args:
+            index (int): Index of the item.
+        Returns:
+            bool: True if the item is checked, False otherwise.
+        """
         item = self.model().item(index, 0)
         return item.checkState() == Qt.CheckState.Checked
 
     def set_checked_items(self, items: list) -> None:
+        """
+        Sets the checked items in the combo box.
+        Args:
+            items (list): List of items to be checked.
+        Returns:
+            None.
+        """
         all_items = [self.itemText(i) for i in range(self.count())]
         for item in all_items:
             if item in items:
                 self.model().item(all_items.index(item)).setCheckState(Qt.CheckState.Checked)
 
     def get_check_items(self) -> list:
+        """
+        Returns a list of checked items.
+        Returns:
+            list: List of checked items.
+        """
         checked_items = []
         for i in range(self.count()):
             if self.__item_checked(i):
@@ -195,18 +310,29 @@ class CheckableComboBox(QComboBox, Widget):
 
 
 class FileBox(QListWidget, Widget):
+    """
+    File box widget. Inherits from QListWidget and Widget.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super(FileBox, self).__init__(*args, **kwargs)
 
 
 class DropBox(QListWidget, Widget):
+    """
+    Drop box widget. Inherits from QListWidget and Widget. Allows to drag and drop files.
+    """
     # TODO: Add possibility to remove unwanted files
     def __init__(self, *args, **kwargs) -> None:
         super(DropBox, self).__init__(*args, **kwargs)
         self.setAcceptDrops(True)
 
     def get_files(self) -> list:
+        """
+        Returns a list of files in the drop box.
+        Returns:
+            list: List of files in the drop box.
+        """
         return [self.item(x).text() for x in range(self.count())]
 
     def dragEnterEvent(self, event):
@@ -233,7 +359,10 @@ class DropBox(QListWidget, Widget):
         else:
             event.ignore()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
+        """
+        Add a placeholder text if the drop box is empty and changes its object name to adjust stylesheets used.
+        """
         super().paintEvent(event)
         if self.count() == 0:
             self.setObjectName("drop")
@@ -250,7 +379,10 @@ class DropBox(QListWidget, Widget):
             self.setObjectName("added")
         self.setStyleSheet("QListWidget#drop {font-size: 32px;}")
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
+        """
+        Handles the mouse press event.
+        """
         files, _ = QFileDialog.getOpenFileNames(self, initialFilter="CSV Files (*.csv);; TSV Files (*.tsv);; "
                                                                     "FCS files (*.fcs)")
         self.addItems(files)

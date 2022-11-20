@@ -7,8 +7,15 @@ from utilities.classification_utils import ClassificationModel, AutoEncoder
 from utilities.visualizations import MplVisualization
 
 
-def run_prediction():
-
+def run_prediction() -> None:
+    """
+    Depending on the command, runs the prediction, training or validation.
+    Returns:
+        None.
+    Raises:
+        argparse.ArgumentTypeError: In case of folder/file not existing.
+        argparse.ArgumentTypeError: If incorrect arguments are provided.
+    """
     if arguments.path is None or check_path(arguments.path) is None:
         raise argparse.ArgumentTypeError("Incorrect path or empty directory")
     if os.path.isdir(arguments.path):
@@ -58,7 +65,14 @@ def run_prediction():
             raise argparse.ArgumentTypeError("No arguments provided")
 
 
-def run_settings():
+def run_settings() -> None:
+    """
+    Shows settings or allows to change them.
+    Returns:
+        None.
+    Raises:
+        argparse.ArgumentTypeError: If incorrect arguments are provided.
+    """
     if arguments.show:
         print(yaml.dump(vars(settings), default_flow_style=False))
     elif arguments.change:
@@ -84,14 +98,26 @@ def run_settings():
         raise argparse.ArgumentTypeError("No arguments provided")
 
 
-def check_path(path):
+def check_path(path: str) -> None or str:
+    """
+    Checks if the path is valid.
+    Args:
+        path (str): Path to check.
+    Returns:
+        None or str: None if path is invalid, path if valid.
+    """
     if not os.path.exists(path):
         return None
     else:
         return path
 
 
-def main():
+def main() -> None:
+    """
+    Main function. Initializes argparse object and sets possible commands.
+    Returns:
+        None.
+    """
     parser = argparse.ArgumentParser(description="CellScanner")
     parser.add_argument("command", type=str, help="Command to run",
                         choices=["predict", "train", "validate", "settings"])

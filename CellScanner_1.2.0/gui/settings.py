@@ -7,6 +7,12 @@ from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, Edit
 
 
 class SettingsWindow(Widget):
+    """
+    Attributes:
+    ----------
+    combo_boxes_content: dict
+        A dictionary containing the content for the combo-boxes taken from SettingsOptions enum.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -85,6 +91,15 @@ class SettingsWindow(Widget):
         classifiers.currentIndexChanged.connect(lambda: self.__update_layouts(classifiers, overlay_classifier))
 
     def __update_fc_related(self, combobox: ComboBox, vis: CheckableComboBox, drop: CheckableComboBox) -> None:
+        """
+        Updates the channels to use and the channels to drop combo-boxes when the fc type is changed.
+        Args:
+            combobox (ComboBox): The combo-box to be updated.
+            vis (CheckableComboBox): The channels to be updated.
+            drop (CheckableComboBox): The columns to be updated.
+        Returns:
+            None.
+        """
         fc = "_" + combobox.currentText().lower()
         if fc == "_":
             fc = fc + self.settings.fc_type.lower()
@@ -93,7 +108,19 @@ class SettingsWindow(Widget):
             widget.addItems(self.combo_boxes_content[widget.name + fc])
             widget.set_checked_items(getattr(self.settings, widget.name + fc))
 
-    def __update_vis(self, vis_type: ComboBox, cores, cores_input, channels, channels_input) -> None:
+    def __update_vis(self, vis_type: ComboBox, cores: Label, cores_input: EditLine, channels: Label,
+                     channels_input: CheckableComboBox) -> None:
+        """
+        Updates the number of cores and the channels to use combo-boxes when the vis type is changed.
+        Args:
+            vis_type (ComboBox): The combo-box to be updated.
+            cores (Label): The label to be updated.
+            cores_input (EditLine): The edit line to be updated.
+            channels (Label): The label to be updated.
+            channels_input (CheckableComboBox): The combo-box to be updated.
+        Returns:
+            None.
+        """
         if vis_type.currentText() is None:
             vis_type = self.settings.vis_type
         else:
@@ -110,11 +137,24 @@ class SettingsWindow(Widget):
             channels_input.show()
 
     def __update_layouts(self, combobox: ComboBox, text: TextEdit) -> None:
+        """
+        Updates the text in the overlay when the model is changed.
+        Args:
+            combobox (ComboBox): The combo-box to be updated.
+            text (TextEdit): The text to be updated.
+        Returns:
+            None.
+        """
         model_name = combobox.currentText()
         if model_name != "":
             text.setText(self.model_info.get_readable(model=combobox.name, name=model_name))
 
     def set_values_from_config(self) -> None:
+        """
+        Sets the values of the widgets from the configuration file.
+        Returns:
+            None.
+        """
         self.combo_boxes_content["model"] = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
         self.combo_boxes_content["autoencoder"] = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
         for child in self.children():
@@ -142,6 +182,11 @@ class SettingsWindow(Widget):
                     pass
 
     def update_config(self) -> None:
+        """
+        Updates the configuration file with the values from the widgets.
+        Returns:
+            None.
+        """
         for child in self.children():
             if isinstance(child, ComboBox):
                 setattr(self.settings, child.name, child.currentText())

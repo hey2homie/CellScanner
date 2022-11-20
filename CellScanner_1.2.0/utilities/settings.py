@@ -31,6 +31,11 @@ class SettingsOptions(Enum):
 
     @classmethod
     def get_dictionary(cls) -> dict:
+        """
+        Returns a dictionary containing the Enum values.
+        Returns:
+            dict: Dictionary containing the Enum values.
+        """
         return {key.name: key.value for key in cls}
 
 
@@ -38,6 +43,45 @@ class Settings:
     """
     Attributes of this class are used throughout the project to determine settings for various operations. Values of
     attributes can be modified either in the setting window or manually by changing entries in the configuration file.
+
+    Attributes:
+    ----------
+    fc_type: str
+        Flow cytometer type. Either Accuri or CytoFlex.
+    hardware: str
+        Hardware to use for training. Either CPU or GPU.
+    results: str
+        Path to results directory.
+    vis_type: str
+        Type of visualization to use. Either UMAP or Channels.
+    vis_dims: str
+        Number of dimensions to use for visualization. Either 2 or 3.
+    vis_channels_accuri: list
+        Channels to use for visualization when using Accuri flow cytometer.
+    vis_channels_cytoflex: list
+        Channels to use for visualization when using CytoFlex flow cytometer.
+    num_umap_cores: str
+        Number of cores to use for UMAP.
+    model: str
+        Name of the model to be used for classification.
+    num_batches: str
+        Number of batches for creating training dataset.
+    num_epochs: str
+        Number of epochs for training.
+    lr_scheduler: str
+        Type of learning rate scheduler to use. Either Constant, Time Decay, Step Decay, or Exponential Decay.
+    lr: str
+        Learning rate.
+    gating_type: str
+        Type of gating to use. Either Autoencoder or Machine.
+    autoencoder: str
+        Name of the autoencoder to be used for gating.
+    cols_to_drop_accuri: list
+        Columns to drop when using Accuri flow cytometer.
+    cols_to_drop_cytoflex: list
+        Columns to drop when using CytoFlex flow cytometer.
+    mse_threshold: str
+        Threshold for autoencoder gating. Can be adjusted after making predictions.
     """
     fc_type = None
     hardware = None
@@ -59,6 +103,9 @@ class Settings:
     mse_threshold = None
 
     def __init__(self) -> None:
+        """
+        Initializes the Settings class by loading the configuration file and setting the attribute's values.
+        """
         with open(".configs/config.yml", "r") as config:
             settings = yaml.load(config, Loader=yaml.SafeLoader)
             for key, value in settings.items():
@@ -67,8 +114,10 @@ class Settings:
     def save_settings(self, command_line: bool = False) -> None:
         """
         Save settings by rewriting configuration file.
+        Args:
+            command_line (bool, optional): Whether or not the process is run from the command line. Defaults to False.
         Returns:
-            None
+            None.
         """
         with open(".configs/config.yml", "w") as config:
             if command_line:
@@ -79,22 +128,58 @@ class Settings:
 
 
 class ModelsInfo:
+    """
+    This object contains metadata about the models that are available for prediction, validation. Used throughout the
+    project.
+
+    Attributes:
+    ----------
+    classifiers: dict
+        Dictionary containing metadata about the classifiers.
+    autoencoders: dict
+        Dictionary containing metadata about the autoencoders.
+    classifier_names: str
+        Current classifier name.
+    autoencoder_name: str
+        Current autoencoder name.
+    """
     classifiers = None
     autoencoders = None
     classifier_name = None
     autoencoder_name = None
 
     def __init__(self) -> None:
+        """
+        Initializes the ModelsInfo class by loading the models metadata file and setting the attribute's values.
+        Returns:
+            None.
+        See Also:
+            :meth:`__load_settings`.
+            :meth:`__check_models`.
+        """
         self.__load_settings()
         self.__check_models()
 
     def __load_settings(self) -> None:
+        """
+        Loads the models metadata file and sets the attribute's values.
+        Returns:
+            None.
+        """
         with open(".configs/models_info.yml", "r") as config:
             config_content = yaml.load(config, Loader=yaml.SafeLoader)
             self.classifiers = config_content["classifiers"]
             self.autoencoders = config_content["autoencoders"]
 
     def __check_models(self) -> None:
+        """
+        Checks if the models specified in the configuration file are available. If not, they are deleted from the
+        configuration file.
+        Returns:
+            None.
+        See Also:
+            :meth:`save_info`.
+        """
         classifiers = os.listdir("./classifiers/")
         autoencoders = [encoder for encoder in os.listdir("./autoencoders/") if encoder.endswith(".h5")]
         self.classifiers = {model: self.classifiers[model] for model in classifiers}
@@ -102,21 +187,48 @@ class ModelsInfo:
         self.save_info()
 
     def get_features_ae(self) -> list:
+        """
+        Returns:
+            list: List of features used for autoencoder training.
+        """
         return self.autoencoders[self.autoencoder_name][1]["features"]
 
     def get_features_shape_ae(self) -> int:
+        """
+        Returns:
+            int: Number of features used for autoencoder training.
+        """
         return int(self.autoencoders[self.autoencoder_name][2]["num_features"])
 
     def get_labels_map(self) -> dict:
+        """
+        Returns:
+            dict: Dictionary containing the mapping between the labels and their corresponding integer values.
+        """
         return self.classifiers[self.classifier_name][1]["labels_map"]
 
     def get_features_shape_classifier(self) -> int:
+        """
+        Returns:
+            int: Number of features used for classifier training.
+        """
         return int(self.classifiers[self.classifier_name][0]["features_shape"])
 
     def get_labels_shape(self) -> int:
+        """
+        Returns:
+            int: Number of labels used for classifier training.
+        """
         return int(self.classifiers[self.classifier_name][2]["labels_shape"])
 
     def get_readable(self, model: str, name: str) -> str:
+        """
+        Args:
+            model (str): Type of model. Either classifier or autoencoder.
+            name (str): Name of the model.
+        Returns:
+            str: Readable list of features or labels.
+        """
         if model == "classifier" or model == "model":
             labels_map = self.classifiers[name][1]["labels_map"]
             labels = [v for _, v in labels_map.items()]
@@ -127,6 +239,18 @@ class ModelsInfo:
 
     def add_classifier(self, name: str, labels_map: dict, features_shape: int, labels_shape: int,
                        files_used: list) -> None:
+        """
+        Adds a classifier to the configuration file.
+        Args:
+            name (str): Name of the classifier.
+            labels_map (dict): Dictionary containing the mapping between the labels and their corresponding integer
+                values.
+            features_shape (int): Number of features used for classifier training.
+            labels_shape (int): Number of labels used for classifier training.
+            files_used (list): List of files used for classifier training.
+        Returns:
+            None.
+        """
         labels_map = {key: str(value) for key, value in labels_map.items()}
         files_used = [file.split("/")[-1] for file in files_used]
         self.classifier_name = name
@@ -134,10 +258,25 @@ class ModelsInfo:
                                   {"labels_shape": labels_shape}, {"files_used": files_used}]
 
     def add_autoencoder(self, name: str, fc_type: str, features: list, num_features: int) -> None:
+        """
+        Adds an autoencoder to the configuration file.
+        Args:
+            name (str): Name of the autoencoder.
+            fc_type (str): Type of the flow cytometry.
+            features (list): List of features used for autoencoder training.
+            num_features (int): Number of features used for autoencoder training.
+        Returns:
+            None.
+        """
         self.autoencoder_name = name
         self.autoencoders[name] = [{"fc_type": fc_type}, {"features": features}, {"num_features": num_features}]
 
     def save_info(self) -> None:
+        """
+        Saves current metadata to the configuration file.
+        Returns:
+            None.
+        """
         with open(".configs/models_info.yml", "w") as config:
             yaml.dump({"autoencoders": self.autoencoders, "classifiers": self.classifiers}, config,
                       default_flow_style=False)

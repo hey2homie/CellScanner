@@ -10,7 +10,7 @@ class AboutWindow(Widget):
         self.__init_ui()
 
     def __init_ui(self) -> None:
-        self.setWindowTitle("About")
+        self.setWindowTitle("About CellScanner")
         self.__init_widget()
 
     def __init_widget(self) -> None:
@@ -23,6 +23,11 @@ class AboutWindow(Widget):
 
     @staticmethod
     def __get_markdown() -> str:
+        """
+        Returns the Markdown text for the about window.
+        Returns:
+            str: Markdown text.
+        """
         with open("gui/markdown_files/about.md") as md:
             return md.read()
 
