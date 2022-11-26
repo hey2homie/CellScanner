@@ -235,7 +235,7 @@ class MplVisualization:
             labels.append("Correct") if true_labels[i] == predicted_labels[i] else labels.append("Incorrect")
         labels = np.array(labels)
         _, count_labels = np.unique(np.asarray(labels), return_counts=True)
-        plt.pie(count_labels, labels=["Correct", "Incorrect"])
+        plt.pie(count_labels, labels=["Correct", "Incorrect"], autopct="%.0f%%")
         plt.title("Pie Chart of Prediction Accuracy")
         plt.savefig(self.output_path + "pie.png")
         return labels
