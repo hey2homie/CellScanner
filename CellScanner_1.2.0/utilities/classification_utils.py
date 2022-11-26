@@ -9,7 +9,7 @@ from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPool
     Dropout
 from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy
-from keras.metrics import Accuracy, Precision, TruePositives, FalsePositives
+from keras.metrics import CategoricalAccuracy, Precision, Recall, TruePositives, FalsePositives
 from keras.activations import elu
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard
 from sklearn.cluster import KMeans
@@ -61,8 +61,8 @@ class AppModels(ABC):
         Optional; Whether the model is being trained or not.
     """
 
-    def __init__(self, settings: Settings, model_info: ModelsInfo, model_type: str,  name: str = None,
-                 files: list = None, training: bool = False):
+    def __init__(self, settings: Settings, model_info: ModelsInfo, model_type: str, name: str = None,
+                 files: list = None, training_cls: bool = False):
         """
         Args:
             settings (Settings): Settings object.
@@ -70,7 +70,7 @@ class AppModels(ABC):
             model_type (str): Type of the model. Either "classifier" or "autoencoder".
             name (str, optional): Optional; Name of the model. Defaults to None.
             files (list, optional): Optional; List of files used for training. Defaults to None.
-            training (bool, optional): Optional; Whether the model is being trained or not. Defaults to False.
+            training_cls (bool, optional): Optional; Whether the model is being trained or not. Defaults to False.
         Returns:
             None.
         """
@@ -78,8 +78,7 @@ class AppModels(ABC):
         self.settings = settings
         self.model_info = model_info
         self.model_type = model_type
-        self.files = files
-        self.file_prep = self.__pre_process(files, training=training)
+        self.file_prep = self.__pre_process(files, training=training_cls)
         self.model = None
 
     def __build_model(self) -> None:
@@ -88,26 +87,33 @@ class AppModels(ABC):
         Returns:
             None.
         """
+        tf.keras.utils.set_random_seed(40)
         if self.model_type == "classifier":
             num_features = self.model_info.get_features_shape_classifier()
             num_classes = self.model_info.get_labels_shape()
             self.model = Sequential([
                 InputLayer(input_shape=num_features),
+                Lambda(lambda x: tf.expand_dims(x, -1)),
                 BatchNormalization(),
-                Dense(100, kernel_initializer="he_uniform"),
+                Conv1D(filters=20, kernel_size=5, padding="valid"),
+                MaxPooling1D(),
+                Activation(activation=elu),
+                Dense(50, kernel_initializer="he_uniform"),
+                Activation(activation=elu),
+                Dense(150, kernel_initializer="he_uniform"),
                 Activation(activation=elu),
                 Dense(300, kernel_initializer="he_uniform"),
                 Activation(activation=elu),
-                Dropout(rate=0.2),
+                Dropout(0.35),
                 Dense(500, kernel_initializer="he_uniform"),
                 Activation(activation=elu),
-                Dropout(rate=0.5),
-                Dense(300, kernel_initializer="he_uniform"),
+                Dropout(0.5),
+                Dense(150, kernel_initializer="he_uniform"),
                 Activation(activation=elu),
-                Dropout(rate=0.3),
-                Dense(100, kernel_initializer="he_uniform"),
+                Dense(30, kernel_initializer="he_uniform"),
                 Activation(activation=elu),
-                Dense(num_classes, activation="relu", kernel_initializer="he_uniform")
+                Flatten(),
+                Dense(num_classes, activation="softmax", kernel_initializer="he_uniform")
             ])
         else:
             num_features = self.model_info.get_features_shape_ae()
@@ -145,8 +151,9 @@ class AppModels(ABC):
         self.__build_model()
         if self.model_type == "classifier":
             self.model.compile(optimizer=Adam(float(self.settings.lr)),
-                               loss=CategoricalCrossentropy(from_logits=True),
-                               metrics=[Accuracy(), Precision(), TruePositives(), FalsePositives()])
+                               loss=CategoricalCrossentropy(from_logits=False),
+                               metrics=[CategoricalAccuracy(), Precision(), Recall(), TruePositives(),
+                                        FalsePositives()])
         else:
             self.model.compile(optimizer=Adam(1e-3), loss="mse")
 
@@ -159,7 +166,7 @@ class AppModels(ABC):
         Returns:
             FilePreparation: FilePreparation object.
         """
-        return FilePreparation(files=files, settings=self.settings, models_info=self.model_info, training=training)
+        return FilePreparation(files=files, settings=self.settings, models_info=self.model_info, training_cls=training)
 
     def create_training_files(self, dataframe: np.ndarray, labels: np.ndarray = None) -> \
             Tuple[tf.data.Dataset, tf.data.Dataset] or Tuple[tf.data.Dataset, tf.data.Dataset, dict]:
@@ -195,7 +202,7 @@ class AppModels(ABC):
             None.
         """
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
-        checkpoint = ModelCheckpoint(folder + name, save_best_only=True)
+        checkpoint = ModelCheckpoint(folder + name, monitor="val_categorical_accuracy", save_best_only=True)
         tf_board = TensorBoard(log_dir="training_logs/" + self.name, histogram_freq=1, write_graph=False,
                                write_images=False, update_freq="epoch")
         callbacks = [checkpoint, tf_board]
@@ -203,7 +210,7 @@ class AppModels(ABC):
             callbacks.extend(scheduler)
         self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs, callbacks=callbacks)
         with open("training_logs/" + name + "/files_used.txt", "w") as file:
-            for f in self.files:
+            for f in self.file_prep.files_list:
                 file.write(f + "\n")
 
     def get_model(self) -> Model:
@@ -250,8 +257,8 @@ class ClassificationModel(AppModels):
             Returns:
                 float: Adjusted learning rate.
             """
-            decay = self.settings.lr / self.settings.num_epochs
-            return self.settings.lr * 1 / (1 + decay * epoch)
+            decay = float(self.settings.lr) / int(self.settings.num_epochs)
+            return float(self.settings.lr) * 1 / (1 + decay * epoch)
 
         def __step_decay(epoch: int) -> float:
             """
@@ -262,7 +269,7 @@ class ClassificationModel(AppModels):
             """
             drop_rate = 0.5
             epochs_drop = 10.0
-            return self.settings.lr * np.pow(drop_rate, np.floor(epoch / epochs_drop))
+            return float(self.settings.lr) * np.pow(drop_rate, np.floor(epoch / epochs_drop))
 
         def __exp_decay(epoch: int) -> float:
             """
@@ -272,7 +279,7 @@ class ClassificationModel(AppModels):
                 float: Adjusted learning rate.
             """
             k = 0.1
-            return self.settings.lr * np.exp(-k * epoch)
+            return float(self.settings.lr) * np.exp(-k * epoch)
 
         data = self.file_prep.get_aggregated()
         dataframe, labels, files = data["data"], data["labels"], data["files"]
@@ -311,18 +318,17 @@ class ClassificationModel(AppModels):
             results["mse"], results["true_labels"] = data["mse"], data["labels"]
         results["data"] = dataframe
         predictions = self.model.predict(dataframe)
-        embeddings = None
         if self.settings.vis_type == "UMAP":
             umap = UmapVisualization(data=dataframe, num_cores=int(self.settings.num_umap_cores),
                                      dims=int(self.settings.vis_dims))
             embeddings = umap.embeddings
             results["embeddings"] = embeddings
         for _, pred in enumerate(predictions):
-            probabilities = tf.nn.softmax(pred)
-            probability_pred.append(tf.get_static_value(max(probabilities)))
-            labels.append(tf.get_static_value(tf.math.argmax(probabilities)))
+            probability_pred.append(tf.get_static_value(pred))
+            labels.append(tf.get_static_value(tf.math.argmax(pred)))
         results["labels"] = np.asarray(list(map(lambda x: labels_map[x], labels)))
         results["probability_pred"] = np.asarray(probability_pred)
+        results["probability_best"] = np.max(results["probability_pred"], axis=1)
         return results
 
     def run_classification(self) -> dict:
@@ -340,19 +346,21 @@ class ClassificationModel(AppModels):
             outputs[key]["mse"] = data["mse"]
         return outputs
 
-    def __diagnostic_plots(self, true_labels, predicted_labels) -> np.ndarray:
+    def __diagnostic_plots(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
+                           probs: np.ndarray) -> np.ndarray:
         """
         Launches process of creating diagnostics plots.
         Args:
             true_labels (np.ndarray): Labels from the files.
             predicted_labels (np.ndarray): Predicted labels.
+            probs (np.ndarray): Predicted probabilities.
         Returns:
             labels_compared (np.ndarray): Numpy array containing labels of correct/incorrect prediction.
         See Also:
             :func:`.MplVisualization.diagnostics()`.
         """
         vis = MplVisualization(self.settings.results)
-        labels_compared = vis.diagnostics(true_labels, predicted_labels)
+        labels_compared = vis.diagnostics(true_labels, predicted_labels, probs)
         return labels_compared
 
     def run_diagnostics(self) -> dict:
@@ -368,7 +376,8 @@ class ClassificationModel(AppModels):
         outputs = self.__make_predictions(diagnostics=True)
         predicted_labels = outputs["labels"]
         true_labels = outputs["true_labels"]
-        outputs["labels_compared"] = self.__diagnostic_plots(true_labels, predicted_labels)
+        probs = outputs["probability_pred"]
+        outputs["labels_compared"] = self.__diagnostic_plots(true_labels, predicted_labels, probs)
         return outputs
 
 
@@ -482,6 +491,7 @@ class AutoEncoder(AppModels):
         return data_clean
 
     def run_training(self) -> None:
+        self.file_prep.gating = False
         num_clusters = self.__calculate_num_clusters()
         dataframe, y_predicted, clusters_blank_count, columns = self.__get_clusters(optimal_k=num_clusters)
         dataframe, y_predicted, remaining_clusters = self.__remove_blank_clusters(dataframe, y_predicted,

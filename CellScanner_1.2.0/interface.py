@@ -54,11 +54,11 @@ def run_prediction() -> None:
             if training_type == "classifier":
                 model_name += ".h5"
                 model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                            model_type="classifier", name=model_name)
+                                            model_type="classifier", name=model_name, training_cls=True)
 
             else:
                 model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
-                                    name=model_name, training=True)
+                                    name=model_name)
             model.run_training()
             print("\nTraining is finished")
         else:

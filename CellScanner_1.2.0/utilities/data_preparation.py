@@ -26,15 +26,17 @@ class FilePreparation:
         ModelsInfo object, containing the model's metadata.
     data: dict
         Dictionary, containing the dataframes and arrays, which are the output of the preprocessing steps.
+    training_cls: bool
+        Boolean indicating whether the current run is training classifier or prediction.
     """
 
-    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo, training: bool = False) -> None:
+    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo, training_cls: bool = False) -> None:
         """
         Args:
             files (list): List containing paths to the files to be processed.
             settings (Settings): Settings object, containing the settings for the current run.
             models_info (ModelsInfo): ModelsInfo object, containing the model's metadata.
-            training (bool): Optional; boolean indicating whether the current run is training or prediction.
+            training_cls (bool): Optional; boolean indicating whether the current run is training or prediction.
         Returns:
             None.
         """
@@ -42,18 +44,32 @@ class FilePreparation:
         self.settings = settings
         self.models_info = models_info
         self.data = {}
-        self.training = training
+        self.training_cls = training_cls
+        self.gating = True
+
+    def __clean_files(self) -> None:
+        """
+        Removes the files, which are not in the FCS format.
+        Returns:
+            None
+        """
+        files_list = []
+        for file in self.files_list:
+            extension = file.split(".")[-1]
+            if extension in ["fcs", "csv", "tsv", "xlsx"]:
+                files_list.append(file)
+        self.files_list = files_list
 
     @staticmethod
-    def __convert(file: str, extension: str) -> pd.DataFrame:
+    def __convert(file: str) -> pd.DataFrame:
         """
         Static method. Converts the input file to a pandas dataframe. Accepts .fcs, .csv, .tsv and .xlsx files.
         Args:
             file (str): Path to the file to be converted.
-            extension (str): File extension.
         Returns:
             dataframe (pd.DataFrame): Pandas' dataframe.
         """
+        extension = file.split(".")[-1]
         if extension == "fcs":
             _, data = fcsparser.parse(file, meta_data_only=False, reformat_meta=False)
             return data
@@ -75,14 +91,14 @@ class FilePreparation:
         Raises:
             KeyError: An error occurred accessing the dataframe's columns.
         """
-        if self.training:
-            cols_to_drop = self.settings.cols_to_drop_accuri if self.settings.fc_type == "Accuri" else \
-                self.settings.cols_to_drop_cytoflex
-        else:
+        if self.gating:
             self.models_info.autoencoder_name = self.settings.autoencoder
             cols_to_drop = self.models_info.get_features_ae()
+        else:
+            cols_to_drop = self.settings.cols_to_drop_accuri if self.settings.fc_type == "Accuri" else \
+                self.settings.cols_to_drop_cytoflex
         try:
-            dataframe = dataframe[cols_to_drop] if not self.training else dataframe.drop(cols_to_drop, axis=1)
+            dataframe = dataframe[cols_to_drop] if self.gating else dataframe.drop(cols_to_drop, axis=1)
             features = np.array(dataframe.columns)
             return dataframe, features
         except KeyError:
@@ -110,7 +126,7 @@ class FilePreparation:
         Performs gating on the input dataframe. Can be done either by using the autoencoder or by using the
         implementation from the previous version of CellScanner. In case of using the autoencoder, the reconstruction
         error is calculated, which is further used together with the MSE threshold to classify cell either as actual
-        cell, or some sort of artifact.
+        cell, or some sort of artifact. When training the autoencoder, the whole step is skipped.
         Args:
             dataframe (pd.DataFrame): Dataframe to be gated.
         Returns:
@@ -118,7 +134,7 @@ class FilePreparation:
             mse (np.ndarray): Reconstruction error for each observation.
         """
         mse = None
-        if self.settings.gating_type == "Autoencoder" and not self.training:
+        if self.settings.gating_type == "Autoencoder" and self.gating:
             from utilities.classification_utils import AutoEncoder
             self.models_info.autoencoder_name = self.settings.autoencoder
             autoencoder = AutoEncoder(settings=self.settings, model_info=self.models_info, model_type="ae",
@@ -126,7 +142,9 @@ class FilePreparation:
             autoencoder = autoencoder.get_model()
             predicted = autoencoder.predict(dataframe)
             mse = np.mean(np.power(dataframe - predicted, 2), axis=1)
-        else:
+            if self.training_cls:
+                dataframe = dataframe[mse < self.settings.mse_threshold].values
+        elif self.settings.gating_type == "Machine":
             raise NotImplementedError
         return np.array(dataframe), mse
 
@@ -156,17 +174,15 @@ class FilePreparation:
         Returns:
             data (dict): dictionary containing the preprocessed data, mse, labels, and features.
         """
+        self.__clean_files()
         for file in self.files_list:
-            extension = file.split(".")[-1]
-            features = None
-            if extension not in ["fcs", "csv", "tsv", "xlsx"]:
-                pass
-            self.data[file] = self.__convert(file=file, extension=extension)
+            self.data[file] = self.__convert(file=file)
             try:
                 self.data[file], features = self.__drop_columns(self.data[file])
             except TypeError:
                 warnings.warn(f"The {file} comes from a different flow cytometer", category=UserWarning)
                 self.data.pop(file)
+                pass
             self.data[file] = self.__scale(self.data[file])
             self.data[file], mse = self.__gate(self.data[file])
             labels = self.__add_labels(file=file, length=self.data[file].shape[0])
@@ -189,7 +205,11 @@ class FilePreparation:
             labels.append(value["labels"])
             features.append(value["features"])
         features = list(np.unique(features))
-        data, mse, labels = np.concatenate(data, axis=0), np.concatenate(mse, axis=0), np.concatenate(labels, axis=0)
+        try:
+            data, mse, labels = np.concatenate(data, axis=0), np.concatenate(mse, axis=0), \
+                                np.concatenate(labels, axis=0)
+        except ValueError:
+            data, labels = np.concatenate(data, axis=0), np.concatenate(labels, axis=0)
         return {"data": data, "mse": mse, "labels": labels, "features": features, "files": self.files_list}
 
 
@@ -243,6 +263,7 @@ class DataPreparation:
             dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.labels_ints))
         else:
             dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.dataframe))
+        tf.keras.utils.set_random_seed(40)
         dataset = dataset.shuffle(self.dataframe.shape[0])
         dataset_length = sum(1 for _ in dataset)
         training_length = np.rint(dataset_length * 0.8)

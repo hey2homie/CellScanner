@@ -199,7 +199,7 @@ class Button(QPushButton, Widget):
         elif self.text() == "Predict" or self.text() == "Diagnose" or self.text() == "Train":
             self.clicked.connect(lambda: windows.widget(1).run_action())
         elif self.text() == "Apply":
-            self.clicked.connect(lambda: windows.widget(3).update_config())
+            self.clicked.connect(lambda: windows.widget(4).update_config())
         elif self.text() == "Change":
             self.clicked.connect(lambda: set_output_directory(windows))
         elif self.text() == "MSE" or self.text() == "Predictions":
@@ -253,7 +253,6 @@ class CheckableComboBox(QComboBox, Widget):
     """
     Checkable combo box widget. Inherits from QComboBox and Widget. Allows to select multiple items.
     """
-    # TODO: Add painting with number of chose items in the box
     def __init__(self, *args, **kwargs) -> None:
         super(QComboBox, self).__init__(*args, **kwargs)
         self.view().pressed.connect(self.__handle_item_pressed)
@@ -270,6 +269,11 @@ class CheckableComboBox(QComboBox, Widget):
         if item.checkState() == Qt.CheckState.Checked:
             item.setCheckState(Qt.CheckState.Unchecked)
         else:
+            if self.name == "vis_channels":
+                checked_items = self.get_check_items()
+                if len(checked_items) >= int(self.parent().children()[15].currentText()):
+                    checked_items.pop(0)
+                    self.set_checked_items(checked_items)
             item.setCheckState(Qt.CheckState.Checked)
 
     def __item_checked(self, index: int) -> bool:
@@ -283,6 +287,20 @@ class CheckableComboBox(QComboBox, Widget):
         item = self.model().item(index, 0)
         return item.checkState() == Qt.CheckState.Checked
 
+    def item_unchecked(self) -> None:
+        """
+        In case current number of checked item is more than vis_dims, unchecks first item.
+        Returns:
+            None
+        """
+        checked_items = self.get_check_items()
+        try:
+            if len(checked_items) >= int(self.parent().children()[15].currentText()):
+                checked_items.pop(0)
+                self.set_checked_items(checked_items)
+        except ValueError:
+            pass
+
     def set_checked_items(self, items: list) -> None:
         """
         Sets the checked items in the combo box.
@@ -293,6 +311,7 @@ class CheckableComboBox(QComboBox, Widget):
         """
         all_items = [self.itemText(i) for i in range(self.count())]
         for item in all_items:
+            self.model().item(all_items.index(item)).setCheckState(Qt.CheckState.Unchecked)
             if item in items:
                 self.model().item(all_items.index(item)).setCheckState(Qt.CheckState.Checked)
 
@@ -322,7 +341,6 @@ class DropBox(QListWidget, Widget):
     """
     Drop box widget. Inherits from QListWidget and Widget. Allows to drag and drop files.
     """
-    # TODO: Add possibility to remove unwanted files
     def __init__(self, *args, **kwargs) -> None:
         super(DropBox, self).__init__(*args, **kwargs)
         self.setAcceptDrops(True)

@@ -79,65 +79,60 @@ class ResultsClassification(Widget):
         self.file_box.addItems(items)
         self.file_box.setCurrentItem(self.file_box.item(0))
 
-    def set_inputs(self, inputs: dict = None, diagnostics: bool = False) -> None:
+    def set_inputs(self, diagnostics: bool = False) -> None:
         """
         Sets the inputs used to display plots and save the information. After running predictions, the default plot to
         display will be the one at index 0 in the file box. After setting the inputs, for default constructs the Pandas
         dataframe which is used as the source for the plots. Changing files in the file box updates this dataframe.
         Args:
-            inputs (dict): Dictionary containing the pairs file : results of predictions.
             diagnostics (bool, optional): If True, the color scheme displays correct/incorrect predictions.
         Returns:
             None.
         """
+        if not self.inputs:
+            return None
         if self.file_box.count() == 0:
             self.file_box.hide()
             self.children()[5].hide()
             self.widget_graph.setGeometry(46, 43, 808, 450)
-            pass
-        if inputs:
-            self.inputs = inputs
-            value = list(self.inputs.keys())[0]
+            current_item = self.inputs
         else:
-            try:
-                value = self.file_box.currentItem().text()
-            except AttributeError:
-                return None
-        if self.inputs:
+            value = self.file_box.currentItem().text()
             current_item = self.inputs[value]
-            color = "Species"
-            if self.settings.vis_type == "UMAP":
-                names = ["X", "Y", "Z"]
-                dataframe = current_item["embeddings"]
+        color = "Species"
+        if self.settings.vis_type == "UMAP":
+            names = ["X", "Y", "Z"]
+            dataframe = current_item["embeddings"]
+            dataframe = [dataframe[:, index] for index in range(dataframe.shape[1])]
+        else:
+            if self.settings.fc_type == "Accuri":
+                available_channels = SettingsOptions.vis_channels_accuri.value
+                channels_to_use = self.settings.vis_channels_accuri
             else:
-                if self.settings.fc_type == "Accuri":
-                    available_channels = SettingsOptions.vis_channels_accuri.value
-                    channels_to_use = self.settings.vis_channels_accuri
-                else:
-                    available_channels = SettingsOptions.vis_channels_cytoflex.value
-                    channels_to_use = self.settings.vis_channels_cytoflex
-                indexes = [available_channels.index(channel) for channel in channels_to_use]
-                names = [available_channels[index] for index in indexes]
-                dataframe = [current_item["data"][:, index] for index in indexes]
-            self.data = pd.DataFrame({names[0]: dataframe[0].astype(np.float32), names[1]: dataframe[1]})
-            self.data["Species"] = current_item["labels"].astype(str)
-            if diagnostics:
-                self.data["Correctness"] = current_item["labels_compared"].astype(str)
-                color = "Correctness"
-            self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
-            if self.settings.vis_dims == "3":
-                self.data[names[2]] = dataframe[2].astype(np.float32)
-                self.graph_outputs = scatter_3d(self.data, x=names[0], y=names[1], z=names[2], color="Species")
-            self.data["Probability"] = current_item["probability_pred"].astype(np.float32)
-            self.data["MSE"] = current_item["mse"].astype(np.float32)
-            layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                                 font=dict(family="Avenir", size=8, color="black"))
-            self.graph_outputs.update_layout(legend=layout_legend)
-            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color=color)
-            self.graph_mse_err.update_layout(legend=layout_legend)
-            self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
-            self.children()[3].setText("MSE")
-            self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
+                available_channels = SettingsOptions.vis_channels_cytoflex.value
+                channels_to_use = self.settings.vis_channels_cytoflex
+            indexes = [available_channels.index(channel) for channel in channels_to_use]
+            names = [available_channels[index] for index in indexes]
+            dataframe = [current_item["data"][:, index] for index in indexes]
+        self.data = pd.DataFrame({names[0]: dataframe[0].astype(np.float32), names[1]: dataframe[1]})
+        self.data["Species"] = current_item["labels"].astype(str)
+        if diagnostics:
+            self.data["Correctness"] = current_item["labels_compared"].astype(str)
+            color = "Correctness"
+        self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
+        if self.settings.vis_dims == 3:
+            self.data[names[2]] = dataframe[2].astype(np.float32)
+            self.graph_outputs = scatter_3d(self.data, x=names[0], y=names[1], z=names[2], color=color)
+        self.data["Probability"] = current_item["probability_best"].astype(np.float32)
+        self.data["MSE"] = current_item["mse"].astype(np.float32)
+        layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                             font=dict(family="Avenir", size=8, color="black"))
+        self.graph_outputs.update_layout(legend=layout_legend)
+        self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
+        self.graph_mse_err.update_layout(legend=layout_legend)
+        self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
+        self.children()[3].setText("MSE")
+        self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
     def change_plot(self, plot_type: str) -> None:
         """
@@ -231,3 +226,5 @@ class ResultsTraining(Widget):
         self.browser.load(QUrl("http://localhost:6006/#scalars"))
         self.browser.reload()
         self.widget_browser.layout().addWidget(self.browser)
+        self.browser.reload()
+        self.browser.reload()

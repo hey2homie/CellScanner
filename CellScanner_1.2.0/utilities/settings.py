@@ -54,7 +54,7 @@ class Settings:
         Path to results directory.
     vis_type: str
         Type of visualization to use. Either UMAP or Channels.
-    vis_dims: str
+    vis_dims: int
         Number of dimensions to use for visualization. Either 2 or 3.
     vis_channels_accuri: list
         Channels to use for visualization when using Accuri flow cytometer.

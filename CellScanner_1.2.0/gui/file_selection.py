@@ -66,10 +66,10 @@ class FileSelector(Widget):
                 files = self.children()[0].get_files()
                 if self.children()[5].isChecked():
                     model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
-                                        name=model_name, training=True)
+                                        name=model_name, training_cls=False)
                 else:
                     model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                                model_type="classifier", name=model_name)
+                                                model_type="classifier", name=model_name, training_cls=True)
                 model.run_training()
                 self.stack.widget(4).set_values_from_config()
                 self.stack.widget(3).run_tf_board(name=model_name)
@@ -78,14 +78,14 @@ class FileSelector(Widget):
                 diagnostics = False if self.action == "Prediction" else True
                 files = self.children()[0].get_files()
                 model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                            model_type="classifier",
-                                            name=settings.model)
+                                            model_type="classifier", name=settings.model)
                 if diagnostics:
                     outputs = model.run_diagnostics()
                 else:
                     outputs = model.run_classification()
                     self.stack.widget(2).set_items(files)
-                self.stack.widget(2).set_inputs(outputs, diagnostics)
+                self.stack.widget(2).inputs = outputs
+                self.stack.widget(2).set_inputs(diagnostics)
                 self.stack.setCurrentIndex(2)
         else:
             MessageBox.about(self, "Warning", "Files are not selected")

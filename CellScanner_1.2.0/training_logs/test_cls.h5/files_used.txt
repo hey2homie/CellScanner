@@ -1,4 +1,0 @@
-/Users/v_vlsv/PyCharmProjects/CellScanner/ref_sel/Bifidobacterium_adolescentis-050520-mGAM-2.fcs
-/Users/v_vlsv/PyCharmProjects/CellScanner/ref_sel/Bacteroides_thetaiotaomicron-050520-mGAM-1.fcs
-/Users/v_vlsv/PyCharmProjects/CellScanner/ref_sel/Escherichia_coli-050520-mGAM-1.fcs
-/Users/v_vlsv/PyCharmProjects/CellScanner/ref_sel/Barsniella_intestihominis-061219-GAM-1.fcs

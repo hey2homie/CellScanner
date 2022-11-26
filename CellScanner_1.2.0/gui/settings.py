@@ -42,7 +42,7 @@ class SettingsWindow(Widget):
         Label(text="Visualisation type:", obj_name="small", geometry=[46, 289, 146, 30], parent=self)
         vis_type = ComboBox(obj_name="combobox", geometry=[201, 289, 110, 30], name="vis_type", parent=self)
         Label(text="Dimension:", obj_name="small", geometry=[334, 289, 98, 30], parent=self)
-        ComboBox(obj_name="combobox", geometry=[442, 289, 55, 30], name="vis_dims", parent=self)
+        vis_dims = ComboBox(obj_name="combobox", geometry=[442, 289, 55, 30], name="vis_dims", parent=self)
         cores = Label(text="Number of cores to compute UMAP:", obj_name="small", geometry=[525, 289, 275, 30],
                       parent=self)
         cores_input = EditLine(obj_name="input", geometry=[809, 289, 25, 30], name="num_umap_cores", parent=self)
@@ -87,6 +87,7 @@ class SettingsWindow(Widget):
         fc.currentIndexChanged.connect(lambda: self.__update_fc_related(fc, channels_input, cols_drop))
         vis_type.currentIndexChanged.connect(lambda: self.__update_vis(vis_type, cores, cores_input, channels,
                                                                        channels_input))
+        vis_dims.currentIndexChanged.connect(channels_input.item_unchecked)
         aes.currentIndexChanged.connect(lambda: self.__update_layouts(aes, overlay_ae))
         classifiers.currentIndexChanged.connect(lambda: self.__update_layouts(classifiers, overlay_classifier))
 
@@ -189,7 +190,10 @@ class SettingsWindow(Widget):
         """
         for child in self.children():
             if isinstance(child, ComboBox):
-                setattr(self.settings, child.name, child.currentText())
+                try:
+                    setattr(self.settings, child.name, int(child.currentText()))
+                except ValueError:
+                    setattr(self.settings, child.name, child.currentText())
             elif isinstance(child, CheckableComboBox):
                 if child.name != "vis_channels" and child.name != "cols_to_drop":
                     setattr(self.settings, child.name, child.get_check_items())
@@ -197,7 +201,6 @@ class SettingsWindow(Widget):
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
                     setattr(self.settings, child.name + fc, child.get_check_items())
             elif isinstance(child, EditLine):
-                # TODO: Instead of if/else, try to work with the config return types
                 if child.name == "mse_threshold":
                     setattr(self.settings, child.name, float(child.text()))
                 else:
