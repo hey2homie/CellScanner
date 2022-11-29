@@ -1,9 +1,11 @@
 import os
 from glob import glob
 
+from PyQt6.QtCore import Qt
+
 from utilities.settings import SettingsOptions
 
-from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit
+from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit, CheckBox
 
 
 class SettingsWindow(Widget):
@@ -62,6 +64,7 @@ class SettingsWindow(Widget):
         ComboBox(obj_name="combobox", geometry=[238, 432, 180, 30], name="lr_scheduler", parent=self)
         Label(text="Initial learning rate:", obj_name="small", geometry=[441, 432, 146, 30], parent=self)
         ComboBox(obj_name="combobox", geometry=[606, 432, 85, 30], name="lr", parent=self)
+        CheckBox(text="Legacy NN", obj_name="mlp", geometry=[713, 432, 104, 30], parent=self)
         Label(text="Data Preparation", obj_name="settings", geometry=[46, 481, 197, 41], parent=self)
         HLine(obj_name="line", geometry=[244, 502, 603, 5], parent=self)
         Label(text="Gating type:", obj_name="small", geometry=[46, 537, 146, 30], parent=self)
@@ -181,6 +184,11 @@ class SettingsWindow(Widget):
                     child.setText(str(self.settings.__dict__[child.name]))
                 except KeyError:
                     pass
+            elif isinstance(child, CheckBox):
+                if self.settings.mlp:
+                    child.setCheckState(Qt.CheckState.Checked)
+                else:
+                    child.setCheckState(Qt.CheckState.Unchecked)
 
     def update_config(self) -> None:
         """
@@ -210,4 +218,6 @@ class SettingsWindow(Widget):
                     setattr(self.settings, child.name, str(child.text()))
                 except AttributeError:
                     pass
+            elif isinstance(child, CheckBox):
+                self.settings.mlp = child.isChecked()
         self.settings.save_settings()

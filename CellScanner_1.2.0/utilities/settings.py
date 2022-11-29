@@ -82,6 +82,8 @@ class Settings:
         Columns to drop when using CytoFlex flow cytometer.
     mse_threshold: str
         Threshold for autoencoder gating. Can be adjusted after making predictions.
+    mlp: bool
+        Indicates usage of NN model from CellScanner V1.
     """
     fc_type = None
     hardware = None
@@ -101,6 +103,7 @@ class Settings:
     cols_to_drop_accuri = None
     cols_to_drop_cytoflex = None
     mse_threshold = None
+    mlp = None
 
     def __init__(self) -> None:
         """

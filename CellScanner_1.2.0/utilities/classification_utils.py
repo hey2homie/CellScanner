@@ -10,7 +10,7 @@ from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPool
 from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy
 from keras.metrics import CategoricalAccuracy, Precision, Recall, TruePositives, FalsePositives
-from keras.activations import elu
+from keras.activations import relu, elu
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
@@ -91,30 +91,39 @@ class AppModels(ABC):
         if self.model_type == "classifier":
             num_features = self.model_info.get_features_shape_classifier()
             num_classes = self.model_info.get_labels_shape()
-            self.model = Sequential([
-                InputLayer(input_shape=num_features),
-                Lambda(lambda x: tf.expand_dims(x, -1)),
-                BatchNormalization(),
-                Conv1D(filters=20, kernel_size=5, padding="valid"),
-                MaxPooling1D(),
-                Activation(activation=elu),
-                Dense(50, kernel_initializer="he_uniform"),
-                Activation(activation=elu),
-                Dense(150, kernel_initializer="he_uniform"),
-                Activation(activation=elu),
-                Dense(300, kernel_initializer="he_uniform"),
-                Activation(activation=elu),
-                Dropout(0.35),
-                Dense(500, kernel_initializer="he_uniform"),
-                Activation(activation=elu),
-                Dropout(0.5),
-                Dense(150, kernel_initializer="he_uniform"),
-                Activation(activation=elu),
-                Dense(30, kernel_initializer="he_uniform"),
-                Activation(activation=elu),
-                Flatten(),
-                Dense(num_classes, activation="softmax", kernel_initializer="he_uniform")
-            ])
+            if self.settings.mlp:
+                self.model = Sequential([
+                    InputLayer(input_shape=num_features),
+                    Activation(activation=relu),
+                    Dense(250),
+                    Activation(activation=relu),
+                    Dense(num_classes, activation="softmax")
+                ])
+            else:
+                self.model = Sequential([
+                    InputLayer(input_shape=num_features),
+                    Lambda(lambda x: tf.expand_dims(x, -1)),
+                    BatchNormalization(),
+                    Conv1D(filters=20, kernel_size=5, padding="valid"),
+                    MaxPooling1D(),
+                    Activation(activation=elu),
+                    Dense(50, kernel_initializer="he_uniform"),
+                    Activation(activation=elu),
+                    Dense(150, kernel_initializer="he_uniform"),
+                    Activation(activation=elu),
+                    Dense(300, kernel_initializer="he_uniform"),
+                    Activation(activation=elu),
+                    Dropout(0.35),
+                    Dense(500, kernel_initializer="he_uniform"),
+                    Activation(activation=elu),
+                    Dropout(0.5),
+                    Dense(150, kernel_initializer="he_uniform"),
+                    Activation(activation=elu),
+                    Dense(30, kernel_initializer="he_uniform"),
+                    Activation(activation=elu),
+                    Flatten(),
+                    Dense(num_classes, activation="softmax", kernel_initializer="he_uniform")
+                ])
         else:
             num_features = self.model_info.get_features_shape_ae()
             encoder = Sequential([
