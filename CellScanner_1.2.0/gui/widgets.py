@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
     QFrame, QComboBox, QLineEdit, QTextEdit, QCheckBox, QInputDialog
 from PyQt6.QtCore import Qt, QEvent
@@ -45,10 +47,33 @@ class Widget(QWidget):
             self.setStyleSheet(style)
 
     def center(self) -> None:
+        """
+        Centers the widget on the screen.
+        Returns:
+            None.
+        """
         qr = self.frameGeometry()
         cp = self.screen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    @abstractmethod
+    def __init_ui(self) -> None:
+        """
+        Initializes main parameters of the widget.
+        Returns:
+            None.
+        """
+        pass
+
+    @abstractmethod
+    def __init_widgets(self) -> None:
+        """
+        Initializes children widgets.
+        Returns:
+            None.
+        """
+        pass
 
 
 class Stack(QStackedWidget, Widget):

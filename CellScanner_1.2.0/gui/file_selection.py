@@ -8,7 +8,7 @@ class FileSelector(Widget):
     Attributes:
     ----------
     action: str
-        Action to be performed after adding files. Can be
+        Action to be performed after adding files. Can be either "Training", "Prediction", or "Tool\nDiagnostics"
     """
 
     def __init__(self, *args, **kwargs):
@@ -85,7 +85,7 @@ class FileSelector(Widget):
                     outputs = model.run_classification()
                     self.stack.widget(2).set_items(files)
                 self.stack.widget(2).inputs = outputs
-                self.stack.widget(2).set_inputs(diagnostics)
+                self.stack.widget(2).set_inputs()
                 self.stack.setCurrentIndex(2)
         else:
             MessageBox.about(self, "Warning", "Files are not selected")

@@ -18,6 +18,7 @@ autoencoders:
   - num_features: 13
 classifiers:
   test_bt_bi_ec.h5:
+  - fc_type: Accuri
   - features_shape: 13
   - labels_map:
       0: Bacteroides thetaiotaomicron
@@ -30,3 +31,4 @@ classifiers:
     - Barsniella_intestihominis-061219-GAM-1.fcs
     - Escherichia_coli-050520-mGAM-1.fcs
     - Escherichia_coli-100519-mGAM-C12.fcs
+  - autoencoder: ae_accuri_13.h5

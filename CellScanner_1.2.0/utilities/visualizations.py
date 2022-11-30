@@ -1,9 +1,6 @@
-import os
 from itertools import cycle
-from datetime import datetime
 
 import numpy as np
-import yaml
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score, \
     PrecisionRecallDisplay
 from sklearn.preprocessing import label_binarize
@@ -86,8 +83,7 @@ class MplVisualization:
         Returns:
             None.
         """
-        self.output_path = output_path + "/" + datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + "/"
-        os.mkdir(self.output_path)
+        self.output_path = output_path
         self.colors = cycle(["aqua", "darkorange", "cornflowerblue", "goldenrod", "rosybrown", "lightgreen",
                              "lightgray", "orchid", "darkmagenta", "olive"])
         self.classes = None
@@ -161,33 +157,6 @@ class MplVisualization:
             fig.savefig(self.output_path + file + "_" + "predictions.png")
             mse_fig.savefig(self.output_path + file + "_" + "mse.png")
             plt.close()
-        # This is temporal solution and not included in the documentation
-        with open(self.output_path + "cell_counts.txt", "w") as file:
-            output = {}
-            for key, value in inputs.items():
-                output[key] = {}
-                labels = inputs[key]["labels"]
-                mse = inputs[key]["mse"]
-                probs = inputs[key]["probability_pred"]
-                labels_count = np.unique(labels, return_counts=True)
-                labels_count = dict(zip(labels_count[0], labels_count[1]))
-                all_cells = sum(labels_count.values())
-                for label in labels_count.keys():
-                    indices = np.where(labels == label)[0]
-                    mse_label = mse[indices]
-                    blanks_label = len(np.where(mse_label > settings.mse_threshold)[0])
-                    probs_label = probs[indices]
-                    probs_label = len(np.where(probs_label > 0.95)[0])
-                    percentage_cells = np.round(labels_count[label] / all_cells * 100, 2)
-                    percentage_blanks = np.round(blanks_label / len(indices) * 100, 2)
-                    percentage_probs = np.round(probs_label / len(indices) * 100, 2)
-                    output[key][str(label)] = {"Number of cells": int(labels_count[label]),
-                                               "Percentage": float(percentage_cells),
-                                               "Number of blanks": int(blanks_label),
-                                               "Percentage of blanks": float(percentage_blanks),
-                                               "Number of high probability": int(probs_label),
-                                               "Percentage of high probability": float(percentage_probs)}
-            yaml.dump(output, file, default_flow_style=False, sort_keys=False)
 
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
                     predicted_labels_probs: np.ndarray) -> np.ndarray:

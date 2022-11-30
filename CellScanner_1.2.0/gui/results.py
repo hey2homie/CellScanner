@@ -5,11 +5,9 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtWidgets import QGridLayout
 
 from plotly.express import scatter_3d, scatter
-import numpy as np
-import pandas as pd
 
 from utilities.visualizations import MplVisualization
-from utilities.settings import SettingsOptions
+from utilities.helpers import create_output_dir, save_cell_counts, get_plotting_info, create_dataframe_vis
 
 from gui.widgets import Widget, Button, FileBox, InputDialog
 
@@ -79,13 +77,11 @@ class ResultsClassification(Widget):
         self.file_box.addItems(items)
         self.file_box.setCurrentItem(self.file_box.item(0))
 
-    def set_inputs(self, diagnostics: bool = False) -> None:
+    def set_inputs(self) -> None:
         """
         Sets the inputs used to display plots and save the information. After running predictions, the default plot to
         display will be the one at index 0 in the file box. After setting the inputs, for default constructs the Pandas
         dataframe which is used as the source for the plots. Changing files in the file box updates this dataframe.
-        Args:
-            diagnostics (bool, optional): If True, the color scheme displays correct/incorrect predictions.
         Returns:
             None.
         """
@@ -99,40 +95,23 @@ class ResultsClassification(Widget):
         else:
             value = self.file_box.currentItem().text()
             current_item = self.inputs[value]
-        color = "Species"
-        if self.settings.vis_type == "UMAP":
-            names = ["X", "Y", "Z"]
-            dataframe = current_item["embeddings"]
-            dataframe = [dataframe[:, index] for index in range(dataframe.shape[1])]
+        dataframe, names = get_plotting_info(self.settings, current_item)
+        self.data, color = create_dataframe_vis(self.settings, current_item, dataframe, names)
+        self.__make_plot(names, color)
+        self.children()[3].setText("MSE")
+        self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
+
+    def __make_plot(self, names: list, color: str):
+        if self.settings.vis_dims == 2:
+            self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
         else:
-            if self.settings.fc_type == "Accuri":
-                available_channels = SettingsOptions.vis_channels_accuri.value
-                channels_to_use = self.settings.vis_channels_accuri
-            else:
-                available_channels = SettingsOptions.vis_channels_cytoflex.value
-                channels_to_use = self.settings.vis_channels_cytoflex
-            indexes = [available_channels.index(channel) for channel in channels_to_use]
-            names = [available_channels[index] for index in indexes]
-            dataframe = [current_item["data"][:, index] for index in indexes]
-        self.data = pd.DataFrame({names[0]: dataframe[0].astype(np.float32), names[1]: dataframe[1]})
-        self.data["Species"] = current_item["labels"].astype(str)
-        if diagnostics:
-            self.data["Correctness"] = current_item["labels_compared"].astype(str)
-            color = "Correctness"
-        self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
-        if self.settings.vis_dims == 3:
-            self.data[names[2]] = dataframe[2].astype(np.float32)
             self.graph_outputs = scatter_3d(self.data, x=names[0], y=names[1], z=names[2], color=color)
-        self.data["Probability"] = current_item["probability_best"].astype(np.float32)
-        self.data["MSE"] = current_item["mse"].astype(np.float32)
         layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                              font=dict(family="Avenir", size=8, color="black"))
         self.graph_outputs.update_layout(legend=layout_legend)
         self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
         self.graph_mse_err.update_layout(legend=layout_legend)
         self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
-        self.children()[3].setText("MSE")
-        self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
     def change_plot(self, plot_type: str) -> None:
         """
@@ -170,8 +149,10 @@ class ResultsClassification(Widget):
         Returns:
             None.
         """
-        visualizations = MplVisualization(self.settings.results)
-        visualizations.save_predictions_visualizations(self.inputs, self.settings)
+        output_dir = create_output_dir(path=self.settings.results)
+        visualizations = MplVisualization(output_path=output_dir)
+        visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
+        save_cell_counts(path=output_dir, inputs=self.inputs, mse_threshold=self.settings.mse_threshold)
 
     def clear(self) -> None:
         """

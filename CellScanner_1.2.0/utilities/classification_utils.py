@@ -22,25 +22,6 @@ from utilities.settings import Settings, ModelsInfo
 import matplotlib.pyplot as plt
 
 
-def set_tf_hardware(hardware: str) -> None:
-    """
-    Set the hardware to use for the tensorflow session, which can be either CPU or GPU.
-    Args:
-        hardware (str): The hardware to use for the tensorflow session, which can be either CPU or GPU.
-    Returns:
-        None.
-    Raises:
-        ValueError: If the hardware is not available.
-        RuntimeError: If TensorFlow is already initialized.
-    """
-    try:
-        tf.config.set_visible_devices([], hardware)
-    except ValueError:
-        raise Exception(hardware + "not available")
-    except RuntimeError:
-        raise Exception("TensorFlow is already running")
-
-
 class AppModels(ABC):
     """
     Base class for both classifier and autoencoder models.
@@ -294,7 +275,8 @@ class ClassificationModel(AppModels):
         dataframe, labels, files = data["data"], data["labels"], data["files"]
         training_set, test_set, labels_map = self.create_training_files(dataframe, labels)
         num_features, num_classes = dataframe.shape[1], np.unique(labels).shape[0]
-        self.model_info.add_classifier(self.name, labels_map, num_features, num_classes, files)
+        self.model_info.add_classifier(self.name, self.settings.fc_type, labels_map, num_features, num_classes, files,
+                                       self.settings.autoencoder)
         scheduler = None
         if self.settings.lr_scheduler == "Time Decay":
             scheduler = [LearningRateScheduler(__time_based_decay)]

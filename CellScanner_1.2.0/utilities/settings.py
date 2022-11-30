@@ -3,6 +3,8 @@ import os
 from glob import glob
 from enum import Enum
 
+from utilities.helpers import set_tf_hardware
+
 
 class SettingsOptions(Enum):
     """
@@ -107,12 +109,14 @@ class Settings:
 
     def __init__(self) -> None:
         """
-        Initializes the Settings class by loading the configuration file and setting the attribute's values.
+        Initializes the Settings class by loading the configuration file and setting the attribute's values. Also, sets
+        tensorflow device for the current session
         """
         with open(".configs/config.yml", "r") as config:
             settings = yaml.load(config, Loader=yaml.SafeLoader)
             for key, value in settings.items():
                 setattr(self, key, value)
+        set_tf_hardware(self.hardware)
 
     def save_settings(self, command_line: bool = False) -> None:
         """
@@ -208,21 +212,21 @@ class ModelsInfo:
         Returns:
             dict: Dictionary containing the mapping between the labels and their corresponding integer values.
         """
-        return self.classifiers[self.classifier_name][1]["labels_map"]
+        return self.classifiers[self.classifier_name][2]["labels_map"]
 
     def get_features_shape_classifier(self) -> int:
         """
         Returns:
             int: Number of features used for classifier training.
         """
-        return int(self.classifiers[self.classifier_name][0]["features_shape"])
+        return int(self.classifiers[self.classifier_name][1]["features_shape"])
 
     def get_labels_shape(self) -> int:
         """
         Returns:
             int: Number of labels used for classifier training.
         """
-        return int(self.classifiers[self.classifier_name][2]["labels_shape"])
+        return int(self.classifiers[self.classifier_name][3]["labels_shape"])
 
     def get_readable(self, model: str, name: str) -> str:
         """
@@ -233,32 +237,35 @@ class ModelsInfo:
             str: Readable list of features or labels.
         """
         if model == "classifier" or model == "model":
-            labels_map = self.classifiers[name][1]["labels_map"]
+            labels_map = self.classifiers[name][2]["labels_map"]
             labels = [v for _, v in labels_map.items()]
             return ", ".join(labels)
         else:
             features = self.autoencoders[name][1]["features"]
             return ", ".join(features)
 
-    def add_classifier(self, name: str, labels_map: dict, features_shape: int, labels_shape: int,
-                       files_used: list) -> None:
+    def add_classifier(self, name: str, fc_type: str, labels_map: dict, features_shape: int, labels_shape: int,
+                       files_used: list, autoencoder_used: str) -> None:
         """
         Adds a classifier to the configuration file.
         Args:
             name (str): Name of the classifier.
+            fc_type (str): Type of the flow cytometry.
             labels_map (dict): Dictionary containing the mapping between the labels and their corresponding integer
                 values.
             features_shape (int): Number of features used for classifier training.
             labels_shape (int): Number of labels used for classifier training.
             files_used (list): List of files used for classifier training.
+            autoencoder_used (str): Name of the autoencoder used for classifier training.
         Returns:
             None.
         """
         labels_map = {key: str(value) for key, value in labels_map.items()}
         files_used = [file.split("/")[-1] for file in files_used]
         self.classifier_name = name
-        self.classifiers[name] = [{"features_shape": features_shape}, {"labels_map": labels_map},
-                                  {"labels_shape": labels_shape}, {"files_used": files_used}]
+        self.classifiers[name] = [{"fc_type": fc_type}, {"features_shape": features_shape}, {"labels_map": labels_map},
+                                  {"labels_shape": labels_shape}, {"files_used": files_used},
+                                  {"autoencoder": autoencoder_used}]
 
     def add_autoencoder(self, name: str, fc_type: str, features: list, num_features: int) -> None:
         """

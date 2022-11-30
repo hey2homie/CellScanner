@@ -8,7 +8,7 @@ gating_type: Autoencoder
 hardware: GPU
 lr: 1e-5
 lr_scheduler: Constant
-mlp: true
+mlp: false
 model: test_bt_bi_ec.h5
 mse_threshold: 0.05
 num_batches: 512
@@ -21,8 +21,8 @@ vis_channels_accuri:
 - FL2-A
 - FL3-A
 vis_channels_cytoflex:
-- FSC-H
-- FSC-A
-- SSC-H
+- FL1-A
+- FL2-A
+- FL3-A
 vis_dims: 3
 vis_type: UMAP

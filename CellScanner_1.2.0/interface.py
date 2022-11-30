@@ -5,6 +5,7 @@ import yaml
 from utilities.settings import Settings, SettingsOptions, ModelsInfo
 from utilities.classification_utils import ClassificationModel, AutoEncoder
 from utilities.visualizations import MplVisualization
+from utilities.helpers import create_output_dir, save_cell_counts
 
 
 def run_prediction() -> None:
@@ -26,8 +27,10 @@ def run_prediction() -> None:
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
                                     name=settings.model)
         results = model.run_classification()
-        visualizations = MplVisualization(output_path=settings.results)
+        output_dir = create_output_dir(path=settings.results)
+        visualizations = MplVisualization(output_path=output_dir)
         visualizations.save_predictions_visualizations(inputs=results, settings=settings)
+        save_cell_counts(path=output_dir, inputs=results, mse_threshold=settings.mse_threshold)
         print("\nClassification is finished")
     elif arguments.command == "validate":
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",

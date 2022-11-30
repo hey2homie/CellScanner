@@ -4,6 +4,7 @@ from glob import glob
 from PyQt6.QtCore import Qt
 
 from utilities.settings import SettingsOptions
+from utilities.helpers import get_available_models_fc, get_available_cls
 
 from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit, CheckBox
 
@@ -12,6 +13,10 @@ class SettingsWindow(Widget):
     """
     Attributes:
     ----------
+    settings: Settings
+        Settings object, containing the settings for the current run.
+    models_info: ModelsInfo
+        ModelsInfo object, containing the model's metadata.
     combo_boxes_content: dict
         A dictionary containing the content for the combo-boxes taken from SettingsOptions enum.
     """
@@ -87,20 +92,25 @@ class SettingsWindow(Widget):
         overlay_classifier.hide()
         overlay_classifier.setText(self.model_info.get_readable(model="classifier", name=self.settings.model))
 
-        fc.currentIndexChanged.connect(lambda: self.__update_fc_related(fc, channels_input, cols_drop))
+        fc.currentIndexChanged.connect(lambda: self.__update_fc_related(fc, channels_input, cols_drop,
+                                                                        aes, classifiers))
         vis_type.currentIndexChanged.connect(lambda: self.__update_vis(vis_type, cores, cores_input, channels,
                                                                        channels_input))
         vis_dims.currentIndexChanged.connect(channels_input.item_unchecked)
-        aes.currentIndexChanged.connect(lambda: self.__update_layouts(aes, overlay_ae))
+        aes.currentIndexChanged.connect(lambda: self.__update_layouts(aes, overlay_ae, channels_input, classifiers))
         classifiers.currentIndexChanged.connect(lambda: self.__update_layouts(classifiers, overlay_classifier))
 
-    def __update_fc_related(self, combobox: ComboBox, vis: CheckableComboBox, drop: CheckableComboBox) -> None:
+    def __update_fc_related(self, combobox: ComboBox, vis: CheckableComboBox, drop: CheckableComboBox, ae: ComboBox,
+                            cls: ComboBox) -> None:
         """
-        Updates the channels to use and the channels to drop combo-boxes when the fc type is changed.
+        Updates the channels to use and the channels to drop combo-boxes when the fc type is changed. Additionally,
+        updates the autoencoder and classifier combo-boxes.
         Args:
             combobox (ComboBox): The combo-box to be updated.
             vis (CheckableComboBox): The channels to be updated.
             drop (CheckableComboBox): The columns to be updated.
+            ae (ComboBox): The autoencoders list to be updated.
+            cls (ComboBox): The classifiers list to be updated.
         Returns:
             None.
         """
@@ -111,6 +121,10 @@ class SettingsWindow(Widget):
             widget.clear()
             widget.addItems(self.combo_boxes_content[widget.name + fc])
             widget.set_checked_items(getattr(self.settings, widget.name + fc))
+        widgets = {cls: self.model_info.classifiers, ae: self.model_info.autoencoders}
+        for widget, data in widgets.items():
+            widget.clear()
+            widget.addItems(get_available_models_fc(data, fc))
 
     def __update_vis(self, vis_type: ComboBox, cores: Label, cores_input: EditLine, channels: Label,
                      channels_input: CheckableComboBox) -> None:
@@ -140,18 +154,31 @@ class SettingsWindow(Widget):
             channels.show()
             channels_input.show()
 
-    def __update_layouts(self, combobox: ComboBox, text: TextEdit) -> None:
+    def __update_layouts(self, combobox: ComboBox, text: TextEdit, vis_channels: CheckableComboBox = None,
+                         classifiers: ComboBox = None) -> None:
         """
-        Updates the text in the overlay when the model is changed.
+        Updates the text in the overlay when the model is changed. Also, updated channels that are available for the
+        visualization if the model is an autoencoder.
         Args:
             combobox (ComboBox): The combo-box to be updated.
             text (TextEdit): The text to be updated.
+            vis_channels (CheckableComboBox, optional): The channels to be updated.
+            classifiers (ComboBox): The classifiers list to be updated.
         Returns:
             None.
         """
         model_name = combobox.currentText()
         if model_name != "":
-            text.setText(self.model_info.get_readable(model=combobox.name, name=model_name))
+            features = self.model_info.get_readable(model=combobox.name, name=model_name)
+            text.setText(features)
+            if combobox.name == "autoencoder":
+                vis_channels.clear()
+                vis_channels.addItems(features.split(", "))
+                fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
+                vis_channels.set_checked_items(getattr(self.settings, "vis_channels" + fc))
+                available_classifiers = get_available_cls(self.model_info.classifiers, model_name)
+                classifiers.clear()
+                classifiers.addItems(available_classifiers)
 
     def set_values_from_config(self) -> None:
         """
@@ -164,11 +191,23 @@ class SettingsWindow(Widget):
         for child in self.children():
             if isinstance(child, (ComboBox, CheckableComboBox)):
                 child.clear()
-                if child.name != "vis_channels" and child.name != "cols_to_drop":
+                if child.name not in ["vis_channels", "cols_to_drop", "model", "autoencoder"]:
                     child.addItems(self.combo_boxes_content[child.name])
                 else:
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
-                    child.addItems(self.combo_boxes_content[child.name + fc])
+                    if child.name == "model":
+                        models = get_available_cls(self.model_info.classifiers, self.settings.autoencoder)
+                        self.combo_boxes_content[child.name] = models
+                        child.addItems(models)
+                    elif child.name == "autoencoder":
+                        models = get_available_models_fc(self.model_info.autoencoders, fc)
+                        self.combo_boxes_content[child.name] = models
+                        child.addItems(models)
+                    elif child.name == "vis_channels":
+                        features = self.model_info.get_readable(model="autoencoder", name=self.settings.autoencoder)
+                        child.addItems(features.split(", "))
+                    else:
+                        child.addItems(self.combo_boxes_content[child.name + fc])
                 if isinstance(child, ComboBox):
                     items = self.combo_boxes_content[child.name]
                     try:
@@ -178,7 +217,6 @@ class SettingsWindow(Widget):
                 elif isinstance(child, CheckableComboBox):
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
                     child.set_checked_items(getattr(self.settings, child.name + fc))
-                    setattr(self.settings, child.name + fc, child.get_check_items())
             elif isinstance(child, (Label, EditLine)):
                 try:
                     child.setText(str(self.settings.__dict__[child.name]))
