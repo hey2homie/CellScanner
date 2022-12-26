@@ -180,8 +180,10 @@ class Button(QPushButton, Widget):
                     stack.setGeometry(*[300, 300, 895, 600])
                 elif stack.currentIndex() == 3:
                     stack.widget(3).tf_board.kill()
+                    print("Killed")
                 elif stack.currentIndex() == 2:
                     stack.widget(2).clear()
+                stack.setGeometry(*[300, 300, 895, 600])
                 stack.setCurrentIndex(0)
                 stack.center()
 

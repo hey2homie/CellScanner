@@ -109,8 +109,13 @@ class ResultsClassification(Widget):
         layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                              font=dict(family="Avenir", size=8, color="black"))
         self.graph_outputs.update_layout(legend=layout_legend)
-        self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
+        self.graph_outputs.update_layout({"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"})     # TODO: Remove later
+        if "Correctness" in self.data.columns:  # Case for diagnostics
+            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Labels")
+        else:
+            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
         self.graph_mse_err.update_layout(legend=layout_legend)
+        self.graph_mse_err.update_layout({"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"})     # TODO: Remove later
         self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
 
     def change_plot(self, plot_type: str) -> None:
@@ -190,10 +195,10 @@ class ResultsTraining(Widget):
         self.__init_widgets()
 
     def __init_widgets(self) -> None:
-        self.widget_browser = Widget(obj_name="", geometry=[46, 43, 808, 450], parent=self)
+        self.widget_browser = Widget(obj_name="", geometry=[46, 43, 993, 550], parent=self)
         self.layout_graph = QGridLayout(parent=self.widget_browser)
         self.layout_graph.addWidget(self.browser)
-        Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
+        Button(text="Menu", obj_name="standard", geometry=[46, 618, 200, 60], parent=self)
 
     def run_tf_board(self, name: str) -> None:
         """
@@ -205,7 +210,5 @@ class ResultsTraining(Widget):
         """
         self.tf_board = subprocess.Popen(["tensorboard", "--logdir=training_logs/" + name, "--port=6006"])
         self.browser.load(QUrl("http://localhost:6006/#scalars"))
-        self.browser.reload()
         self.widget_browser.layout().addWidget(self.browser)
-        self.browser.reload()
         self.browser.reload()

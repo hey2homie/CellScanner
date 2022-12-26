@@ -16,10 +16,9 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
 from utilities.data_preparation import FilePreparation, DataPreparation
+from utilities.helpers import create_output_dir, match_blanks_to_mse
 from utilities.visualizations import MplVisualization, UmapVisualization
 from utilities.settings import Settings, ModelsInfo
-
-import matplotlib.pyplot as plt
 
 
 class AppModels(ABC):
@@ -85,7 +84,7 @@ class AppModels(ABC):
                     InputLayer(input_shape=num_features),
                     Lambda(lambda x: tf.expand_dims(x, -1)),
                     BatchNormalization(),
-                    Conv1D(filters=20, kernel_size=5, padding="valid"),
+                    Conv1D(filters=num_features - 5, kernel_size=3, padding="valid"),
                     MaxPooling1D(),
                     Activation(activation=elu),
                     Dense(50, kernel_initializer="he_uniform"),
@@ -103,7 +102,7 @@ class AppModels(ABC):
                     Dense(30, kernel_initializer="he_uniform"),
                     Activation(activation=elu),
                     Flatten(),
-                    Dense(num_classes, activation="softmax", kernel_initializer="he_uniform")
+                    Dense(num_classes, activation="softmax", kernel_initializer="glorot_uniform")
                 ])
         else:
             num_features = self.model_info.get_features_shape_ae()
@@ -192,7 +191,10 @@ class AppModels(ABC):
             None.
         """
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
-        checkpoint = ModelCheckpoint(folder + name, monitor="val_categorical_accuracy", save_best_only=True)
+        if self.model_type == "classifier":
+            checkpoint = ModelCheckpoint(folder + name, monitor="val_categorical_accuracy", save_best_only=True)
+        else:
+            checkpoint = ModelCheckpoint(folder + name, monitor="val_loss", save_best_only=True)
         tf_board = TensorBoard(log_dir="training_logs/" + self.name, histogram_freq=1, write_graph=False,
                                write_images=False, update_freq="epoch")
         callbacks = [checkpoint, tf_board]
@@ -259,7 +261,7 @@ class ClassificationModel(AppModels):
             """
             drop_rate = 0.5
             epochs_drop = 10.0
-            return float(self.settings.lr) * np.pow(drop_rate, np.floor(epoch / epochs_drop))
+            return float(self.settings.lr) * np.power(drop_rate, np.floor(epoch / epochs_drop))
 
         def __exp_decay(epoch: int) -> float:
             """
@@ -338,7 +340,7 @@ class ClassificationModel(AppModels):
         return outputs
 
     def __diagnostic_plots(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
-                           probs: np.ndarray) -> np.ndarray:
+                           probs: np.ndarray, mse: np.ndarray) -> np.ndarray:
         """
         Launches process of creating diagnostics plots.
         Args:
@@ -350,8 +352,9 @@ class ClassificationModel(AppModels):
         See Also:
             :func:`.MplVisualization.diagnostics()`.
         """
-        vis = MplVisualization(self.settings.results)
-        labels_compared = vis.diagnostics(true_labels, predicted_labels, probs)
+        output_dir = create_output_dir(path=self.settings.results)
+        vis = MplVisualization(output_dir)
+        labels_compared = vis.diagnostics(true_labels, predicted_labels, probs, mse, self.settings.mse_threshold)
         return labels_compared
 
     def run_diagnostics(self) -> dict:
@@ -368,7 +371,9 @@ class ClassificationModel(AppModels):
         predicted_labels = outputs["labels"]
         true_labels = outputs["true_labels"]
         probs = outputs["probability_pred"]
-        outputs["labels_compared"] = self.__diagnostic_plots(true_labels, predicted_labels, probs)
+        mse = outputs["mse"]
+        predicted_labels = match_blanks_to_mse(predicted_labels, mse, self.settings.mse_threshold)
+        outputs["labels_compared"] = self.__diagnostic_plots(true_labels, predicted_labels, probs, mse)
         return outputs
 
 
@@ -377,32 +382,9 @@ class AutoEncoder(AppModels):
     Class for the AutoEncoder model.
     """
 
-    def __calculate_num_clusters(self) -> int:
-        """
-        Calculates the number of clusters used for the KMeans algorithm. Raises MatPlotLib plot which helps to determine
-        the number of clusters. Input is expected from the user.
-        Returns:
-            num_clusters (int): Number of clusters.
-        """
-        dataframe = self.file_prep.get_aggregated()["data"]
-        gms_per_k = [GaussianMixture(n_components=k, n_init=10, random_state=42).fit(dataframe) for k in range(1, 11)]
-        aics = np.array([model.aic(dataframe) for model in gms_per_k])
-        plt.plot(aics, marker="p")
-        plt.show()
-        while True:
-            try:
-                optimal_k = int(input("Enter the number of clusters: "))
-                break
-            except ValueError:
-                print("Please enter a valid number")
-        plt.close()
-        return optimal_k
-
-    def __get_clusters(self, optimal_k: int) -> Tuple[np.ndarray, np.ndarray, dict, list]:
+    def __get_clusters(self) -> Tuple[np.ndarray, np.ndarray, dict, list]:
         """
         Gets the clusters from the KMeans algorithm.
-        Args:
-            optimal_k (int): Number of clusters.
         Returns:
             dataframe (np.ndarray): Numpy array of the data.
             y_predicted (np.ndarray): Numpy array containing cluster label for the observations.
@@ -411,18 +393,19 @@ class AutoEncoder(AppModels):
         """
         data = self.file_prep.get_aggregated()
         dataframe, labels, features = data["data"], data["labels"], data["features"]
-        kmeans = KMeans(n_clusters=optimal_k)
+        print("Size of dataframe before clustering: {}".format(dataframe.shape))
+        kmeans = KMeans(n_clusters=10)
         y_predicted = kmeans.fit_predict(dataframe)
         clusters_content_labels = {}
-        clusters_content = {}
-        for i in np.unique(labels):
-            clusters_content_labels[i] = np.take(labels, np.where(labels == i))
-            clusters_content[i] = np.take(dataframe, np.where(labels == i))
+        for i in np.unique(y_predicted):
+            clusters_content_labels[i] = np.take(labels, np.where(y_predicted == i))
         clusters_blank_count = {}
         for key, value in clusters_content_labels.items():
             types, counts = np.unique(value, return_counts=True)
-            count_blank = np.take(counts, np.where(types == "Blank")).sum()
+            types = np.char.lower(types)
+            count_blank = np.take(counts, np.where(types == "blank")).sum()
             clusters_blank_count[key] = np.round((count_blank / counts.sum()) * 100, 2)
+        print("Clusters blank count: {}".format(clusters_blank_count))
         return dataframe, y_predicted, clusters_blank_count, features
 
     @staticmethod
@@ -446,6 +429,7 @@ class AutoEncoder(AppModels):
         dataframe = np.delete(dataframe, indexes, axis=0)
         y_predicted = np.delete(y_predicted, indexes, axis=0)
         remaining_clusters = np.unique(y_predicted)
+        print("Size of dataframe after removing blank clusters: {}".format(dataframe.shape))
         return dataframe, y_predicted, remaining_clusters
 
     @staticmethod
@@ -479,12 +463,12 @@ class AutoEncoder(AppModels):
         for key, values in data_clustered_clean.items():
             if key != firs_key:
                 data_clean = np.append(data_clean, values, axis=0)
+        print("Size of dataframe after removing outliers: {}".format(data_clean.shape))
         return data_clean
 
     def run_training(self) -> None:
         self.file_prep.gating = False
-        num_clusters = self.__calculate_num_clusters()
-        dataframe, y_predicted, clusters_blank_count, columns = self.__get_clusters(optimal_k=num_clusters)
+        dataframe, y_predicted, clusters_blank_count, columns = self.__get_clusters()
         dataframe, y_predicted, remaining_clusters = self.__remove_blank_clusters(dataframe, y_predicted,
                                                                                   clusters_blank_count)
         data_clean = self.__remove_outliers(dataframe, y_predicted, remaining_clusters)

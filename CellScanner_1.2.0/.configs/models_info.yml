@@ -16,19 +16,137 @@ autoencoders:
     - FL4-H
     - Width
   - num_features: 13
+  ae_cytoflex_1.h5:
+  - fc_type: Cytoflex
+  - features:
+    - FSC-H
+    - FSC-A
+    - SSC-H
+    - SSC-A
+    - FL1-H
+    - FL1-A
+    - FL4-H
+    - FL4-A
+    - FL3-red-H
+    - FL3-red-A
+    - APC-A750-H
+    - APC-A750-A
+    - VSSC-H
+    - VSSC-A
+    - KO525-H
+    - KO525-A
+    - FL2-orange-H
+    - FL2-orange-A
+    - mCherry-H
+    - mCherry-A
+    - PI-H
+    - PI-A
+    - FSC-Width
+  - num_features: 23
+  accuri_test.h5:
+  - fc_type: Accuri
+  - features:
+    - FSC-A
+    - SSC-A
+    - FL1-A
+    - FL2-A
+    - FL3-A
+    - FL4-A
+    - FSC-H
+    - SSC-H
+    - FL1-H
+    - FL2-H
+    - FL3-H
+    - FL4-H
+    - Width
+  - num_features: 13
+  ae_cytoflex_2.h5:
+  - fc_type: Cytoflex
+  - features:
+    - FSC-A
+    - SSC-A
+    - FL1-A
+    - FL2-A
+    - FL3-A
+    - FL4-A
+    - FSC-H
+    - SSC-H
+    - FL1-H
+    - FL2-H
+    - FL3-H
+    - FL4-H
+    - Width
+  - num_features: 13
 classifiers:
-  test_bt_bi_ec.h5:
+  bu_bh_ec_rm_pm.h5:
   - fc_type: Accuri
   - features_shape: 13
   - labels_map:
-      0: Bacteroides thetaiotaomicron
-      1: Barsniella intestihominis
+      0: Bacteroides uniformis
+      1: Blautia hydrogenotrophica
       2: Escherichia coli
-  - labels_shape: 3
+      3: Parabacteroides merdae
+      4: Ruminococcus bromii
+  - labels_shape: 5
   - files_used:
-    - Bacteroides_thetaiotaomicron-050520-mGAM-1.fcs
-    - Bacteroides_thetaiotaomicron-100519-mGAM-D07.fcs
-    - Barsniella_intestihominis-061219-GAM-1.fcs
+    - Bacteroides_uniformis-050520-mGAM-1.fcs
     - Escherichia_coli-050520-mGAM-1.fcs
-    - Escherichia_coli-100519-mGAM-C12.fcs
-  - autoencoder: ae_accuri_13.h5
+    - Ruminococcus_bromii-050520-mGAM-1.fcs
+    - Parabacteroides_merdae-141019-GAM-1.fcs
+    - Blautia_hydrogenotrophica-211119-GAM-1.fcs
+  - autoencoder: accuri_test.h5
+  bu_ca_ri_pc_pm.h5:
+  - fc_type: Accuri
+  - features_shape: 13
+  - labels_map:
+      0: Bacteroides uniformis
+      1: Collinsella aerofaciens
+      2: Parabacteroides merdae
+      3: Prevotella copri
+      4: Roseburia intestinalis
+  - labels_shape: 5
+  - files_used:
+    - Bacteroides_uniformis-050520-mGAM-1.fcs
+    - Collinsella_aerofaciens-050520-mGAM-1.fcs
+    - Roseburia_intestinalis-050520-mGAM-1.fcs
+    - Prevotella_copri-050520-mGAM-1.fcs
+    - Parabacteroides_merdae-141019-GAM-1.fcs
+  - autoencoder: accuri_test.h5
+  time_series_accuri_89_124.h5:
+  - fc_type: Accuri
+  - features_shape: 13
+  - labels_map:
+      0: 124Z mono
+      1: 78R mono
+  - labels_shape: 2
+  - files_used:
+    - 78R_mono_t0.fcs
+    - 78R_mono_t16.5-1_100.fcs
+    - 78R_mono_t18-1_100.fcs
+    - 78R_mono_t19.5-1_100.fcs
+    - 78R_mono_t21-1_100.fcs
+    - 78R_mono_t22.5-1_100.fcs
+    - 78R_mono_t24-1_100.fcs
+    - 78R_mono_t25.5-1_100.fcs
+    - 78R_mono_t27-1_1000.fcs
+    - 78R_mono_t28.5-1_1000.fcs
+    - 78R_mono_t30-1_1000.fcs
+    - 78R_mono_t40.5-1_1000.fcs
+    - 78R_mono_t42-1_1000.fcs
+    - 78R_mono_t48-1_10^4.fcs
+    - 78R_mono_t66-1_10^5.fcs
+    - 78R_mono_t69-1_10^5.fcs
+    - 78R_mono_t72-1_10^5.fcs
+    - 124Z_mono_t0-1.fcs
+    - 124Z_mono_t16.5-1_10.fcs
+    - 124Z_mono_t19.5-1_10.fcs
+    - 124Z_mono_t22.5-1_10.fcs
+    - 124Z_mono_t25.5-1_100.fcs
+    - 124Z_mono_t28.5-1_100.fcs
+    - 124Z_mono_t40.5-1_1000.fcs
+    - 124Z_mono_t43.5-1_1000.fcs
+    - 124Z_mono_t46.5-1_10^4.fcs
+    - 124Z_mono_t64.5-1_10^4.fcs
+    - 124Z_mono_t67.5-1_10^4.fcs
+    - 124Z_mono_t70.5-1_10^4.fcs
+  - autoencoder: accuri_test.h5

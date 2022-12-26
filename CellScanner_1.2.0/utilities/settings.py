@@ -187,8 +187,8 @@ class ModelsInfo:
         See Also:
             :meth:`save_info`.
         """
-        classifiers = os.listdir("./classifiers/")
-        autoencoders = [encoder for encoder in os.listdir("./autoencoders/") if encoder.endswith(".h5")]
+        classifiers = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
+        autoencoders = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
         self.classifiers = {model: self.classifiers[model] for model in classifiers}
         self.autoencoders = {model: self.autoencoders[model] for model in autoencoders}
         self.save_info()
@@ -289,4 +289,4 @@ class ModelsInfo:
         """
         with open(".configs/models_info.yml", "w") as config:
             yaml.dump({"autoencoders": self.autoencoders, "classifiers": self.classifiers}, config,
-                      default_flow_style=False)
+                      default_flow_style=False, sort_keys=False)

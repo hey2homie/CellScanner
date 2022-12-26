@@ -74,6 +74,9 @@ class FileSelector(Widget):
                 self.stack.widget(4).set_values_from_config()
                 self.stack.widget(3).run_tf_board(name=model_name)
                 self.stack.setCurrentIndex(3)
+                self.stack.currentWidget().center()
+                self.stack.setGeometry(*[300, 300, 1080, 700])
+                self.stack.center()
             else:
                 diagnostics = False if self.action == "Prediction" else True
                 files = self.children()[0].get_files()

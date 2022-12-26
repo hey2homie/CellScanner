@@ -114,7 +114,7 @@ class FilePreparation:
             dataframe (pd.DataFrame): Scaled dataframe.
         """
         for column in dataframe.select_dtypes(include=[np.number]).columns:
-            with np.errstate(divide="ignore"):
+            with np.errstate(all="ignore"):
                 dataframe[column] = np.log10(dataframe[column].values)
         dataframe.replace([np.inf, -np.inf], np.nan, inplace=True)
         dataframe.dropna(inplace=True)
@@ -200,16 +200,18 @@ class FilePreparation:
         self.get_prepared_inputs()
         data, labels, mse, features = [], [], [], []
         for key, value in self.data.items():
+            print("The size of data from file {} is {}".format(key, value["data"].shape))
             data.append(value["data"])
             mse.append(value["mse"])
             labels.append(value["labels"])
             features.append(value["features"])
-        features = list(np.unique(features))
+        features = list(features[0])
         try:
             data, mse, labels = np.concatenate(data, axis=0), np.concatenate(mse, axis=0), \
                                 np.concatenate(labels, axis=0)
         except ValueError:
             data, labels = np.concatenate(data, axis=0), np.concatenate(labels, axis=0)
+        print(data.shape)
         return {"data": data, "mse": mse, "labels": labels, "features": features, "files": self.files_list}
 
 

@@ -44,6 +44,8 @@ def get_available_cls(classifiers: dict, ae: str) -> list:
 
 
 def create_output_dir(path: str) -> str:
+    if not os.path.exists(path):
+        os.makedirs(path)
     output_path = path + "/" + datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + "/"
     os.mkdir(output_path)
     return output_path
@@ -109,8 +111,21 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
     dataframe["Probability"] = data["probability_best"].astype(np.float32)
     dataframe["MSE"] = data["mse"].astype(np.float32)
     try:
+        dataframe["Labels"] = data["true_labels"].astype(str)
         dataframe["Correctness"] = data["labels_compared"].astype(str)
         color = "Correctness"
     except KeyError:
         color = "Species"
     return dataframe, color
+
+
+def match_blanks_to_mse(predicted_labels: np.ndarray, mse: np.ndarray, threshold: float) -> np.ndarray:
+    np.place(predicted_labels, mse > threshold, "Blank")
+    return predicted_labels
+
+
+def drop_blanks(true_labels: np.ndarray, predicted_probs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    indices = np.where(true_labels != "Blank")[0]
+    true_labels = true_labels[indices]
+    predicted_labels = predicted_probs[indices]
+    return true_labels, predicted_labels

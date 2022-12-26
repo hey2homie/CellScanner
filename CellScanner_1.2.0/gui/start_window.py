@@ -26,6 +26,7 @@ class MainWindow(Widget):
     def __window_params(self) -> None:
         self.setGeometry(300, 300, 895, 600)
         self.stack.setGeometry(self.geometry())
+        self.stack.center()
 
     def __init_widgets(self) -> None:
         Label(text="CellScanner", obj_name="tittle", geometry=[0, 9, 895, 69], parent=self)

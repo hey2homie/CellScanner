@@ -28,6 +28,7 @@ def run_prediction() -> None:
                                     name=settings.model)
         results = model.run_classification()
         output_dir = create_output_dir(path=settings.results)
+        print(output_dir)
         visualizations = MplVisualization(output_path=output_dir)
         visualizations.save_predictions_visualizations(inputs=results, settings=settings)
         save_cell_counts(path=output_dir, inputs=results, mse_threshold=settings.mse_threshold)
@@ -54,8 +55,8 @@ def run_prediction() -> None:
                 if training_type in ["autoencoder", "classifier"]:
                     break
         if model_name and training_type:
+            model_name += ".h5"
             if training_type == "classifier":
-                model_name += ".h5"
                 model = ClassificationModel(settings=settings, model_info=models_info, files=files,
                                             model_type="classifier", name=model_name, training_cls=True)
 

@@ -21,6 +21,7 @@ def main():
     SettingsWindow(stack=stack)
     AboutWindow(stack=stack)
     stack.setCurrentIndex(0)
+    stack.center()
     stack.show()
     sys.exit(app.exec())
 

@@ -84,8 +84,8 @@ class SettingsWindow(Widget):
         EditLine(obj_name="input", geometry=[664, 576, 42, 30], name="mse_threshold", parent=self)
         Button(text="Menu", obj_name="standard", geometry=[46, 618, 200, 60], parent=self)
         Button(text="Apply", obj_name="standard", geometry=[652, 618, 200, 60], parent=self)
-        overlay_classifier = TextEdit(obj_name="overlay", name="classifier", geometry=[370, 104, 300, 100], parent=self)
-        overlay_ae = TextEdit(obj_name="overlay", name="ae", geometry=[379, 306, 300, 100], parent=self)
+        overlay_classifier = TextEdit(obj_name="overlay", name="classifier", geometry=[297, 286, 300, 100], parent=self)
+        overlay_ae = TextEdit(obj_name="overlay", name="ae", geometry=[305, 467, 300, 100], parent=self)
 
         overlay_ae.hide()
         overlay_ae.setText(self.model_info.get_readable(model="ae", name=self.settings.autoencoder))
@@ -186,8 +186,6 @@ class SettingsWindow(Widget):
         Returns:
             None.
         """
-        self.combo_boxes_content["model"] = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
-        self.combo_boxes_content["autoencoder"] = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
         for child in self.children():
             if isinstance(child, (ComboBox, CheckableComboBox)):
                 child.clear()

@@ -1,4 +1,4 @@
-autoencoder: ae_accuri_13.h5
+autoencoder: accuri_test.h5
 cols_to_drop_accuri:
 - Time
 cols_to_drop_cytoflex:
@@ -6,23 +6,23 @@ cols_to_drop_cytoflex:
 fc_type: Accuri
 gating_type: Autoencoder
 hardware: GPU
-lr: 1e-5
-lr_scheduler: Constant
+lr: 1e-3
+lr_scheduler: Step Decay
 mlp: false
-model: test_bt_bi_ec.h5
+model: bu_bh_ec_rm_pm.h5
 mse_threshold: 0.05
-num_batches: 512
+num_batches: 256
 num_classes: 11
-num_epochs: 50
+num_epochs: 100
 num_umap_cores: 8
 results: /Users/v_vlsv/PyCharmProjects/CellScanner/CellScanner_1.2.0/outputs
 vis_channels_accuri:
 - FL1-A
-- FL2-A
-- FL3-A
+- FL4-A
+- FL1-H
 vis_channels_cytoflex:
 - FL1-A
-- FL2-A
-- FL3-A
+- FL1-H
+- FL4-A
 vis_dims: 3
-vis_type: UMAP
+vis_type: Channels

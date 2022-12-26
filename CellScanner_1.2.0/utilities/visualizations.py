@@ -2,7 +2,7 @@ from itertools import cycle
 
 import numpy as np
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score, \
-    PrecisionRecallDisplay
+    PrecisionRecallDisplay, RocCurveDisplay
 from sklearn.preprocessing import label_binarize
 from mlxtend.evaluate import confusion_matrix
 
@@ -11,6 +11,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
 
+from utilities.helpers import drop_blanks
 from utilities.settings import Settings, SettingsOptions
 
 
@@ -159,13 +160,15 @@ class MplVisualization:
             plt.close()
 
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
-                    predicted_labels_probs: np.ndarray) -> np.ndarray:
+                    predicted_labels_probs: np.ndarray, mse: np.ndarray, mse_threshold: float) -> np.ndarray:
         """
         Calculates diagnostic metrics for the model.
         Args:
             true_labels (np.ndarray): True labels.
             predicted_labels (np.ndarray): Predicted labels.
             predicted_labels_probs (np.ndarray): Probabilities of predicted labels.
+            mse (np.ndarray): Reconstruction errors.
+            mse_threshold (float): Threshold for the reconstruction error.
         Returns:
             labels_compared (np.ndarray): Array of correct/incorrect labels.
         Raises:
@@ -178,16 +181,17 @@ class MplVisualization:
             :meth:`__aggregated_matrix`.
         """
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:
-            print(np.unique(true_labels), np.unique(predicted_labels))
             raise ValueError("Number of classes in true and predicted labels are not equal")
-        self.classes = np.unique(true_labels)
+        true_labels_binarized, predicted_labels_probs = drop_blanks(true_labels, predicted_labels_probs)
+        self.classes = np.unique(true_labels_binarized)
         self.n_classes = self.classes.shape[0]
-        true_labels_binarized = label_binarize(true_labels, classes=self.classes)
+        true_labels_binarized = label_binarize(true_labels_binarized, classes=self.classes[self.classes != "Blank"])
         self.classes = {i: bacteria_class for i, bacteria_class in enumerate(self.classes)}
         labels_compared = self.__pie(true_labels, predicted_labels)
         self.__roc(true_labels_binarized, predicted_labels_probs)
         self.__precision_recall(true_labels_binarized, predicted_labels_probs)
         self.__confusion_matrix(true_labels, predicted_labels)
+        self.__mse_scatter(mse, true_labels, mse_threshold)
         return labels_compared
 
     def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> np.ndarray:
@@ -207,6 +211,7 @@ class MplVisualization:
         plt.pie(count_labels, labels=["Correct", "Incorrect"], autopct="%.0f%%")
         plt.title("Pie Chart of Prediction Accuracy")
         plt.savefig(self.output_path + "pie.png")
+        plt.close()
         return labels
 
     def __roc(self, true_labels: np.ndarray, predicted_labels_probs: np.ndarray) -> None:
@@ -218,38 +223,45 @@ class MplVisualization:
         Returns:
             None.
         """
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for i in range(self.n_classes):
-            fpr[i], tpr[i], _ = roc_curve(true_labels[:, i], predicted_labels_probs[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])
-        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(self.n_classes)]))
-        mean_tpr = np.zeros_like(all_fpr)
-        for i in range(self.n_classes):
-            mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
-        mean_tpr /= self.n_classes
-        fpr["micro"], tpr["micro"], _ = roc_curve(true_labels.ravel(), predicted_labels_probs.ravel())
-        roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
-        fpr["macro"] = all_fpr
-        tpr["macro"] = mean_tpr
-        roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
-        plt.figure()
-        plt.plot(fpr["micro"], tpr["micro"], label="micro-average ROC curve (area = {0:0.2f})".format(roc_auc["micro"]),
-                 color="deeppink", linestyle=":", linewidth=4)
-        plt.plot(fpr["macro"], tpr["macro"], label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
-                 color="navy", linestyle=":", linewidth=4)
-        for i, color in zip(range(self.n_classes), self.colors):
-            plt.plot(fpr[i], tpr[i], color=color, lw=2,
-                     label="ROC curve of class {0} (area = {1:0.2f})".format(self.classes[i], roc_auc[i]))
-        plt.plot([0, 1], [0, 1], "k--", lw=2)
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("ROC Curves")
-        plt.legend(loc="lower right")
+        if self.n_classes > 2:
+            fpr = dict()
+            tpr = dict()
+            roc_auc = dict()
+            for i in range(self.n_classes):
+                fpr[i], tpr[i], _ = roc_curve(true_labels[:, i], predicted_labels_probs[:, i])
+                roc_auc[i] = auc(fpr[i], tpr[i])
+            all_fpr = np.unique(np.concatenate([fpr[i] for i in range(self.n_classes)]))
+            mean_tpr = np.zeros_like(all_fpr)
+            for i in range(self.n_classes):
+                mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+            mean_tpr /= self.n_classes
+            fpr["micro"], tpr["micro"], _ = roc_curve(true_labels.ravel(), predicted_labels_probs.ravel())
+            roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+            fpr["macro"] = all_fpr
+            tpr["macro"] = mean_tpr
+            roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+            plt.figure()
+            plt.plot(fpr["micro"], tpr["micro"],
+                     label="micro-average ROC curve (area = {0:0.2f})".format(roc_auc["micro"]), color="deeppink",
+                     linestyle=":", linewidth=4)
+            plt.plot(fpr["macro"], tpr["macro"],
+                     label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]), color="navy",
+                     linestyle=":", linewidth=4)
+            for i, color in zip(range(self.n_classes), self.colors):
+                plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                         label="ROC curve of class {0} (area = {1:0.2f})".format(self.classes[i], roc_auc[i]))
+            plt.plot([0, 1], [0, 1], "k--", lw=2)
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title("ROC Curves")
+            plt.legend(loc="lower right")
+        else:
+            fpr, tpr, _ = roc_curve(true_labels[:, 0], predicted_labels_probs[:, 1])
+            RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
         plt.savefig(self.output_path + "roc.png")
+        plt.close()
 
     def __precision_recall(self, true_labels: np.ndarray, predicted_labels_probs: np.ndarray) -> None:
         """
@@ -260,35 +272,40 @@ class MplVisualization:
         Returns:
             None.
         """
-        precision = dict()
-        recall = dict()
-        average_precision = dict()
-        for i in range(self.n_classes):
-            precision[i], recall[i], _ = precision_recall_curve(true_labels[:, i], predicted_labels_probs[:, i])
-            average_precision[i] = average_precision_score(true_labels[:, i], predicted_labels_probs[:, i])
-        _, ax = plt.subplots(figsize=(7, 8))
-        f_scores = np.linspace(0.2, 0.8, num=4)
-        l = None
-        for f_score in f_scores:
-            x = np.linspace(0.01, 1)
-            y = f_score * x / (2 * x - f_score)
-            (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
-            plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
-        display = None
-        for i, color in zip(range(self.n_classes), self.colors):
-            display = PrecisionRecallDisplay(recall=recall[i], precision=precision[i],
-                                             average_precision=average_precision[i])
-            display.plot(ax=ax, name=f"Precision-recall for {self.classes[i]}", color=color)
-        handles, labels = display.ax_.get_legend_handles_labels()
-        handles.extend([l])
-        labels.extend(["Iso-f1 curves"])
-        ax.set_xlim([0.0, 1.0])
-        ax.set_ylim([0.0, 1.05])
-        ax.legend(handles=handles, labels=labels, loc="lower right")
-        ax.set_title("Precision-Recall Curves")
+        if self.n_classes > 2:
+            precision = dict()
+            recall = dict()
+            average_precision = dict()
+            for i in range(self.n_classes):
+                precision[i], recall[i], _ = precision_recall_curve(true_labels[:, i], predicted_labels_probs[:, i])
+                average_precision[i] = average_precision_score(true_labels[:, i], predicted_labels_probs[:, i])
+            _, ax = plt.subplots(figsize=(7, 8))
+            f_scores = np.linspace(0.2, 0.8, num=4)
+            l = None
+            for f_score in f_scores:
+                x = np.linspace(0.01, 1)
+                y = f_score * x / (2 * x - f_score)
+                (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
+                plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
+            display = None
+            for i, color in zip(range(self.n_classes), self.colors):
+                display = PrecisionRecallDisplay(recall=recall[i], precision=precision[i],
+                                                 average_precision=average_precision[i])
+                display.plot(ax=ax, name=f"Precision-recall for {self.classes[i]}", color=color)
+            handles, labels = display.ax_.get_legend_handles_labels()
+            handles.extend([l])
+            labels.extend(["Iso-f1 curves"])
+            ax.set_xlim([0.0, 1.0])
+            ax.set_ylim([0.0, 1.05])
+            ax.legend(handles=handles, labels=labels, loc="lower right")
+            ax.set_title("Precision-Recall Curves")
+        else:
+            precision, recall, _ = precision_recall_curve(true_labels, predicted_labels_probs[:, 1])
+            PrecisionRecallDisplay(precision=precision, recall=recall).plot()
         plt.savefig(self.output_path + "precision_recall.png")
+        plt.close()
 
-    def __confusion_matrix(self, true_labels: np.ndarray, predicted_labels: np.ndarray):
+    def __confusion_matrix(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
         """
         Creates aggregated confusion matrix.
         Args:
@@ -297,10 +314,27 @@ class MplVisualization:
         Returns:
             None.
         """
-        _, true_labels = np.unique(true_labels, return_inverse=True)
-        _, predicted_labels = np.unique(predicted_labels, return_inverse=True)
-        cm = confusion_matrix(true_labels, predicted_labels)
-        plot_confusion_matrix(conf_mat=cm, class_names=list(self.classes.values()), figsize=(7, 8), show_normed="true")
+        true_labels, true_labels_counts = np.unique(true_labels, return_inverse=True)
+        _, predicted_labels_counts = np.unique(predicted_labels, return_inverse=True)
+        cm = confusion_matrix(true_labels_counts, predicted_labels_counts)
+        plot_confusion_matrix(conf_mat=cm, class_names=true_labels, figsize=(7, 8), show_normed="true")
         plt.tight_layout()
         plt.title("Confusion Matrix")
         plt.savefig(self.output_path + "confusion_matrix.png")
+        plt.close()
+
+    def __mse_scatter(self, mse: np.ndarray, true_labels: np.ndarray, mse_threshold: float) -> None:
+        plt.figure(figsize=(7, 7))
+        uniq_labels, _ = np.unique(true_labels, return_inverse=True)
+        for label, color in zip(uniq_labels, self.colors):
+            mse = list(mse)
+            indexes_plot = np.where(true_labels == label)
+            mse_axis_y = np.take(mse, indexes_plot, axis=0)
+            plt.scatter(indexes_plot, mse_axis_y, c=color, label=label)
+        plt.axhline(y=mse_threshold, color="r", linestyle="-")
+        plt.xlabel("Index")
+        plt.ylabel("MSE")
+        plt.title("MSE Scatter")
+        plt.legend()
+        plt.savefig(self.output_path + "mse_scatter.png")
+        plt.close()
