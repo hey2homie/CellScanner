@@ -211,7 +211,7 @@ class Button(QPushButton, Widget):
             """
             stack.setCurrentIndex(4)
             stack.currentWidget().center()
-            stack.setGeometry(*[300, 300, 895, 700])
+            stack.setGeometry(*[300, 300, 895, 737])
             stack.center()
 
         windows = self.parent().stack
@@ -298,7 +298,7 @@ class CheckableComboBox(QComboBox, Widget):
         else:
             if self.name == "vis_channels":
                 checked_items = self.get_check_items()
-                if len(checked_items) >= int(self.parent().children()[15].currentText()):
+                if len(checked_items) >= int(self.parent().children()[17].currentText()):
                     checked_items.pop(0)
                     self.set_checked_items(checked_items)
             item.setCheckState(Qt.CheckState.Checked)

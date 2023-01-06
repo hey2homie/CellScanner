@@ -15,8 +15,8 @@ class SettingsOptions(Enum):
     autoencoder = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
     vis_type = ["UMAP", "Channels"]
     vis_dims = ["2", "3"]
-    vis_channels_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
-                           "Width"]
+    vis_channels_accuri = ["FSC-A", "SSC-A", "FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H",
+                           "FL3-H", "FL4-H", "Width"]
     vis_channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
                              "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
                              "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width"]
@@ -86,6 +86,13 @@ class Settings:
         Threshold for autoencoder gating. Can be adjusted after making predictions.
     mlp: bool
         Indicates usage of NN model from CellScanner V1.
+    number_of_clusters: int
+        Number of clusters to use in data preparation for autoencoder.
+    blank_threshold: int
+        Clusters containing more than this number of blank events will be removed.
+    softmax_prob_threshold: float
+        Threshold for softmax probability. Events with probability less than this value are labelled as low probability
+        predictions.
     """
     fc_type = None
     hardware = None
@@ -106,6 +113,9 @@ class Settings:
     cols_to_drop_cytoflex = None
     mse_threshold = None
     mlp = None
+    number_of_clusters = None
+    blank_threshold = None
+    softmax_prob_threshold = None
 
     def __init__(self) -> None:
         """

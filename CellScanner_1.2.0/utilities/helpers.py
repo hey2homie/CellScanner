@@ -51,7 +51,7 @@ def create_output_dir(path: str) -> str:
     return output_path
 
 
-def save_cell_counts(path: str, inputs: dict, mse_threshold: float) -> None:
+def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_threshold: float) -> None:
     with open(path + "cell_counts.txt", "w") as file:
         output = {}
         for key, value in inputs.items():
@@ -67,7 +67,7 @@ def save_cell_counts(path: str, inputs: dict, mse_threshold: float) -> None:
                 mse_label = mse[indices]
                 blanks_label = len(np.where(mse_label > mse_threshold)[0])
                 probs_label = probs[indices]
-                probs_label = len(np.where(probs_label > 0.95)[0])
+                probs_label = len(np.where(probs_label > prob_threshold)[0])
                 percentage_cells = np.round(labels_count[label] / all_cells * 100, 2)
                 percentage_blanks = np.round(blanks_label / len(indices) * 100, 2)
                 percentage_probs = np.round(probs_label / len(indices) * 100, 2)
@@ -116,6 +116,8 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
         color = "Correctness"
     except KeyError:
         color = "Species"
+    if len(dataframe) > 20000:
+        dataframe = dataframe.sample(n=20000, random_state=42)
     return dataframe, color
 
 

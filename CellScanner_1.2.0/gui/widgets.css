@@ -109,5 +109,5 @@ QCheckBox {
 }
 
 QTextEdit {
-    /* TODO: Markdown */
+    font-size: 16px;
 }

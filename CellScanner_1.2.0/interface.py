@@ -31,7 +31,8 @@ def run_prediction() -> None:
         print(output_dir)
         visualizations = MplVisualization(output_path=output_dir)
         visualizations.save_predictions_visualizations(inputs=results, settings=settings)
-        save_cell_counts(path=output_dir, inputs=results, mse_threshold=settings.mse_threshold)
+        save_cell_counts(path=output_dir, inputs=results, mse_threshold=settings.mse_threshold,
+                         prob_threshold=settings.softmax_prob_threshold)
         print("\nClassification is finished")
     elif arguments.command == "validate":
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
@@ -83,7 +84,10 @@ def run_settings() -> None:
         try:
             available_values = getattr(SettingsOptions, arguments.change[0]).value
             while True:
-                value = input(f"Available options are {available_values}: ")
+                try:
+                    value = arguments.name[0]
+                except IndexError:
+                    value = input(f"Available options are {available_values}: ")
                 if value in available_values:
                     setattr(settings, arguments.change[0], value)
                     break
@@ -91,9 +95,15 @@ def run_settings() -> None:
                     print("Invalid option")
         except AttributeError:
             while True:
-                value = input(f"Enter new value for {arguments.change[0]}: ")
+                try:
+                    value = arguments.name[0]
+                except IndexError:
+                    value = input(f"Enter new value for {arguments.change[0]}: ")
                 if value:
-                    setattr(settings, arguments.change[0], int(value))
+                    try:
+                        setattr(settings, arguments.change[0], int(value))
+                    except ValueError:
+                        setattr(settings, arguments.change[0], str(value))
                     break
                 else:
                     print("Invalid option")

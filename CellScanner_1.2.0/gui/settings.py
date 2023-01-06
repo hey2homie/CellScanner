@@ -1,6 +1,3 @@
-import os
-from glob import glob
-
 from PyQt6.QtCore import Qt
 
 from utilities.settings import SettingsOptions
@@ -41,6 +38,8 @@ class SettingsWindow(Widget):
         fc = ComboBox(obj_name="combobox", geometry=[201, 148, 108, 30], name="fc_type", parent=self)
         Label(text="Hardware:", obj_name="small", geometry=[332, 148, 88, 30], parent=self)
         ComboBox(obj_name="combobox", geometry=[427, 148, 85, 30], name="hardware", parent=self)
+        Label(text="Probability threshold:", obj_name="small", geometry=[535, 148, 162, 30], parent=self)
+        EditLine(obj_name="input", geometry=[704, 148, 42, 30], name="softmax_prob_threshold", parent=self)
         Label(text="Output location:", obj_name="small", geometry=[46, 185, 146, 30], parent=self)
         Label(obj_name="small", geometry=[201, 185, 526, 30], name="results", parent=self)
         Button(text="Change", obj_name="settings", geometry=[736, 185, 65, 30], parent=self)
@@ -82,8 +81,12 @@ class SettingsWindow(Widget):
         Button(text="?", obj_name="settings", geometry=[442, 576, 25, 30], name="ae", parent=self)
         Label(text="Reconstruction Error:", obj_name="small", geometry=[491, 576, 164, 30], parent=self)
         EditLine(obj_name="input", geometry=[664, 576, 42, 30], name="mse_threshold", parent=self)
-        Button(text="Menu", obj_name="standard", geometry=[46, 618, 200, 60], parent=self)
-        Button(text="Apply", obj_name="standard", geometry=[652, 618, 200, 60], parent=self)
+        Label(text="Number of clusters:", obj_name="small", geometry=[46, 615, 150, 30], parent=self)
+        EditLine(obj_name="input", geometry=[207, 615, 35, 30], name="number_of_clusters", parent=self)
+        Label(text="Blank content:", obj_name="small", geometry=[270, 615, 115, 30], parent=self)
+        EditLine(obj_name="input", geometry=[393, 615, 35, 30], name="blank_threshold", parent=self)
+        Button(text="Menu", obj_name="standard", geometry=[46, 655, 200, 60], parent=self)
+        Button(text="Apply", obj_name="standard", geometry=[652, 655, 200, 60], parent=self)
         overlay_classifier = TextEdit(obj_name="overlay", name="classifier", geometry=[297, 286, 300, 100], parent=self)
         overlay_ae = TextEdit(obj_name="overlay", name="ae", geometry=[305, 467, 300, 100], parent=self)
 
@@ -245,7 +248,7 @@ class SettingsWindow(Widget):
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
                     setattr(self.settings, child.name + fc, child.get_check_items())
             elif isinstance(child, EditLine):
-                if child.name == "mse_threshold":
+                if child.name == "mse_threshold" or child.name == "softmax_prob_threshold":
                     setattr(self.settings, child.name, float(child.text()))
                 else:
                     setattr(self.settings, child.name, int(child.text()))

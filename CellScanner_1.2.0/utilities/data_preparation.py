@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import fcsparser
 
+from sklearn.neural_network import MLPClassifier
+
 from utilities.settings import Settings, ModelsInfo
 
 
@@ -46,6 +48,7 @@ class FilePreparation:
         self.data = {}
         self.training_cls = training_cls
         self.gating = True
+        self.classifier_gating = None
 
     def __clean_files(self) -> None:
         """
@@ -107,7 +110,7 @@ class FilePreparation:
     @staticmethod
     def __scale(dataframe: pd.DataFrame) -> pd.DataFrame:
         """
-        Static method. Scales the input dataframe using the log10 and drops +/-inf, and NaN values.
+        Static method. Scales the input dataframe using the arcsinh
         Args:
             dataframe (pd.DataFrame): Dataframe to be scaled.
         Returns:
@@ -115,13 +118,10 @@ class FilePreparation:
         """
         for column in dataframe.select_dtypes(include=[np.number]).columns:
             with np.errstate(all="ignore"):
-                dataframe[column] = np.log10(dataframe[column].values)
-        dataframe.replace([np.inf, -np.inf], np.nan, inplace=True)
-        dataframe.dropna(inplace=True)
-        dataframe.reset_index(drop=True, inplace=True)
+                dataframe[column] = np.arcsinh(dataframe[column].values)
         return dataframe
 
-    def __gate(self, dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def __gate(self, dataframe: pd.DataFrame, file: str) -> Tuple[np.ndarray, np.ndarray]:
         """
         Performs gating on the input dataframe. Can be done either by using the autoencoder or by using the
         implementation from the previous version of CellScanner. In case of using the autoencoder, the reconstruction
@@ -129,6 +129,7 @@ class FilePreparation:
         cell, or some sort of artifact. When training the autoencoder, the whole step is skipped.
         Args:
             dataframe (pd.DataFrame): Dataframe to be gated.
+            file (str): Path to the file, which is currently being processed.
         Returns:
             data (np.ndarray): Passed dataframe but converted to np.ndarray.
             mse (np.ndarray): Reconstruction error for each observation.
@@ -149,7 +150,7 @@ class FilePreparation:
         return np.array(dataframe), mse
 
     @staticmethod
-    def __add_labels(file: str, length: int) -> np.ndarray:
+    def __add_labels(file: str, length: int, gating: bool = False) -> np.ndarray:
         """
         Static method. Adds labels to the input dataframe. Labels are added based on the file name. Files are expected
         to be named in the following formats: "Name-name_...fcs" or "Name_...fcs".
@@ -163,9 +164,12 @@ class FilePreparation:
         labels = []
         for row in range(0, length):
             try:
-                labels.append(split[0] + " " + split[1])
+                name = split[0] + " " + split[1]
             except IndexError:
-                labels.append(split[0])
+                name = split[0]
+            if gating:
+                name = "blank" if "blank" in name.lower() else "cell"
+        labels.append(name)
         return np.array(labels)
 
     def get_prepared_inputs(self) -> dict:
@@ -184,7 +188,7 @@ class FilePreparation:
                 self.data.pop(file)
                 pass
             self.data[file] = self.__scale(self.data[file])
-            self.data[file], mse = self.__gate(self.data[file])
+            self.data[file], mse = self.__gate(self.data[file], file=file)
             labels = self.__add_labels(file=file, length=self.data[file].shape[0])
             self.data[file] = {"data": self.data[file], "mse": mse, "labels": labels, "features": features}
         return self.data
@@ -200,7 +204,6 @@ class FilePreparation:
         self.get_prepared_inputs()
         data, labels, mse, features = [], [], [], []
         for key, value in self.data.items():
-            print("The size of data from file {} is {}".format(key, value["data"].shape))
             data.append(value["data"])
             mse.append(value["mse"])
             labels.append(value["labels"])
@@ -211,7 +214,6 @@ class FilePreparation:
                                 np.concatenate(labels, axis=0)
         except ValueError:
             data, labels = np.concatenate(data, axis=0), np.concatenate(labels, axis=0)
-        print(data.shape)
         return {"data": data, "mse": mse, "labels": labels, "features": features, "files": self.files_list}
 
 

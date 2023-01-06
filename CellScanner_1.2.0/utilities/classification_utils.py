@@ -8,8 +8,9 @@ from keras.models import Model, Sequential
 from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPooling1D, Dense, Activation, Flatten, \
     Dropout
 from keras.optimizers import Adam
-from keras.losses import CategoricalCrossentropy
-from keras.metrics import CategoricalAccuracy, Precision, Recall, TruePositives, FalsePositives
+from keras.losses import CategoricalCrossentropy, BinaryCrossentropy
+from keras.metrics import CategoricalAccuracy, Precision, Recall, TruePositives, FalsePositives, BinaryAccuracy, \
+    TrueNegatives, FalseNegatives
 from keras.activations import relu, elu
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard
 from sklearn.cluster import KMeans
@@ -84,7 +85,7 @@ class AppModels(ABC):
                     InputLayer(input_shape=num_features),
                     Lambda(lambda x: tf.expand_dims(x, -1)),
                     BatchNormalization(),
-                    Conv1D(filters=num_features - 5, kernel_size=3, padding="valid"),
+                    Conv1D(filters=20, kernel_size=5, padding="valid"),
                     MaxPooling1D(),
                     Activation(activation=elu),
                     Dense(50, kernel_initializer="he_uniform"),
@@ -138,11 +139,30 @@ class AppModels(ABC):
             None.
         """
         self.__build_model()
+        metrics = [TruePositives(), FalsePositives(), TrueNegatives(), FalseNegatives()]
         if self.model_type == "classifier":
-            self.model.compile(optimizer=Adam(float(self.settings.lr)),
-                               loss=CategoricalCrossentropy(from_logits=False),
-                               metrics=[CategoricalAccuracy(), Precision(), Recall(), TruePositives(),
-                                        FalsePositives()])
+            num_classes = self.model_info.get_labels_shape()
+            if num_classes > 2:
+                loss = CategoricalCrossentropy(from_logits=False)
+                metrics.extend([CategoricalAccuracy(), Precision(), Recall()])
+            else:
+                from keras import backend as K
+
+                def precision(y_true, y_pred):
+                    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+                    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+                    precision = true_positives / (predicted_positives + K.epsilon())
+                    return precision
+
+                def recall(y_true, y_pred):
+                    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+                    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+                    recall = true_positives / (possible_positives + K.epsilon())
+                    return recall
+
+                loss = BinaryCrossentropy(from_logits=False)
+                metrics.extend([BinaryAccuracy(), precision, recall])
+            self.model.compile(optimizer=Adam(float(self.settings.lr)), loss=loss, metrics=metrics)
         else:
             self.model.compile(optimizer=Adam(1e-3), loss="mse")
 
@@ -192,7 +212,8 @@ class AppModels(ABC):
         """
         folder = "./classifiers/" if self.model_type == "classifier" else "./autoencoders/"
         if self.model_type == "classifier":
-            checkpoint = ModelCheckpoint(folder + name, monitor="val_categorical_accuracy", save_best_only=True)
+            monitor = "val_categorical_accuracy" if self.model_info.get_labels_shape() > 2 else "val_binary_accuracy"
+            checkpoint = ModelCheckpoint(folder + name, monitor=monitor, save_best_only=True)
         else:
             checkpoint = ModelCheckpoint(folder + name, monitor="val_loss", save_best_only=True)
         tf_board = TensorBoard(log_dir="training_logs/" + self.name, histogram_freq=1, write_graph=False,
@@ -200,7 +221,13 @@ class AppModels(ABC):
         callbacks = [checkpoint, tf_board]
         if scheduler:
             callbacks.extend(scheduler)
-        self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs, callbacks=callbacks)
+        history = self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs,
+                                 callbacks=callbacks)
+        import pandas as pd
+        hist_df = pd.DataFrame(history.history)
+        hist_csv_file = "training_logs/" + name + '/history.csv'
+        with open(hist_csv_file, mode='w') as f:
+            hist_df.to_csv(f)
         with open("training_logs/" + name + "/files_used.txt", "w") as file:
             for f in self.file_prep.files_list:
                 file.write(f + "\n")
@@ -394,11 +421,12 @@ class AutoEncoder(AppModels):
         data = self.file_prep.get_aggregated()
         dataframe, labels, features = data["data"], data["labels"], data["features"]
         print("Size of dataframe before clustering: {}".format(dataframe.shape))
-        kmeans = KMeans(n_clusters=10)
+        kmeans = KMeans(n_clusters=self.settings.number_of_clusters)
         y_predicted = kmeans.fit_predict(dataframe)
         clusters_content_labels = {}
         for i in np.unique(y_predicted):
-            clusters_content_labels[i] = np.take(labels, np.where(y_predicted == i))
+            if len(y_predicted[y_predicted == i]) > 5:
+                clusters_content_labels[i] = np.take(labels, np.where(y_predicted == i))
         clusters_blank_count = {}
         for key, value in clusters_content_labels.items():
             types, counts = np.unique(value, return_counts=True)
@@ -408,8 +436,7 @@ class AutoEncoder(AppModels):
         print("Clusters blank count: {}".format(clusters_blank_count))
         return dataframe, y_predicted, clusters_blank_count, features
 
-    @staticmethod
-    def __remove_blank_clusters(dataframe: np.ndarray, y_predicted: np.ndarray, clusters_blank_count: dict) -> \
+    def __remove_blank_clusters(self, dataframe: np.ndarray, y_predicted: np.ndarray, clusters_blank_count: dict) -> \
             Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Static method. Removes the clusters which contain more than 10% of blank samples.
@@ -424,7 +451,7 @@ class AutoEncoder(AppModels):
         """
         indexes = []
         for key, value in clusters_blank_count.items():
-            if clusters_blank_count[key] > 10:
+            if clusters_blank_count[key] > self.settings.blank_threshold:
                 indexes.extend(np.where(y_predicted == key)[0].tolist())
         dataframe = np.delete(dataframe, indexes, axis=0)
         y_predicted = np.delete(y_predicted, indexes, axis=0)
@@ -443,16 +470,20 @@ class AutoEncoder(AppModels):
         Returns:
             data_clean (np.ndarray): Numpy array of the data without outliers, which is used to train the model.
         """
+        clusters = remaining_clusters.tolist()
+        for k in remaining_clusters:
+            if dataframe[np.where(y_predicted == k)].shape[0] < 5:
+                clusters.remove(k)
         gm_per_cluster = [
             GaussianMixture(n_components=1, n_init=10, random_state=42).fit(dataframe[np.where(y_predicted == k)])
-            for k in remaining_clusters]
+            for k in clusters]
         data_clustered = {}
-        for i in remaining_clusters:
+        for i in clusters:
             data_clustered[i] = np.take(dataframe, np.where(y_predicted == i), axis=0)[0]
         anomalies_per_cluster = {}
         data_clustered_clean = {}
         count = 0
-        for i in remaining_clusters:
+        for i in clusters:
             densities = gm_per_cluster[count].score_samples(data_clustered[i])
             density_threshold = np.percentile(densities, 4)
             data_clustered_clean[i] = data_clustered[i][densities > density_threshold]

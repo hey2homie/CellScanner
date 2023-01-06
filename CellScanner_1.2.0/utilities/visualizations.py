@@ -210,7 +210,7 @@ class MplVisualization:
         _, count_labels = np.unique(np.asarray(labels), return_counts=True)
         plt.pie(count_labels, labels=["Correct", "Incorrect"], autopct="%.0f%%")
         plt.title("Pie Chart of Prediction Accuracy")
-        plt.savefig(self.output_path + "pie.png")
+        plt.savefig(self.output_path + "pie_no_blanks.png")
         plt.close()
         return labels
 
@@ -320,7 +320,7 @@ class MplVisualization:
         plot_confusion_matrix(conf_mat=cm, class_names=true_labels, figsize=(7, 8), show_normed="true")
         plt.tight_layout()
         plt.title("Confusion Matrix")
-        plt.savefig(self.output_path + "confusion_matrix.png")
+        plt.savefig(self.output_path + "confusion_matrix_no_blanks.png")
         plt.close()
 
     def __mse_scatter(self, mse: np.ndarray, true_labels: np.ndarray, mse_threshold: float) -> None:

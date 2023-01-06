@@ -157,7 +157,8 @@ class ResultsClassification(Widget):
         output_dir = create_output_dir(path=self.settings.results)
         visualizations = MplVisualization(output_path=output_dir)
         visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
-        save_cell_counts(path=output_dir, inputs=self.inputs, mse_threshold=self.settings.mse_threshold)
+        save_cell_counts(path=output_dir, inputs=self.inputs, mse_threshold=self.settings.mse_threshold,
+                         prob_threshold=self.settings.softmax_prob_threshold)
 
     def clear(self) -> None:
         """
