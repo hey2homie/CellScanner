@@ -28,6 +28,6 @@ class AboutWindow(Widget):
         Returns:
             str: Markdown text.
         """
-        with open("gui/markdown_files/about.md") as md:
+        with open("../README.MD", "r") as md:
             return md.read()
 

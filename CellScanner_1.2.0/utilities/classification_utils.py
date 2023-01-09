@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from keras.models import Model, Sequential
 from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPooling1D, Dense, Activation, Flatten, \
@@ -223,9 +224,10 @@ class AppModels(ABC):
             callbacks.extend(scheduler)
         history = self.model.fit(training_set, validation_data=test_set, epochs=self.settings.num_epochs,
                                  callbacks=callbacks)
-        import pandas as pd
         hist_df = pd.DataFrame(history.history)
         hist_csv_file = "training_logs/" + name + '/history.csv'
+        if os.path.isdir("training_logs/") is not True:
+            os.mkdir("training_logs/")
         with open(hist_csv_file, mode='w') as f:
             hist_df.to_csv(f)
         with open("training_logs/" + name + "/files_used.txt", "w") as file:

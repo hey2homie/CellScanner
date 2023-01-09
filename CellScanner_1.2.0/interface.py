@@ -85,8 +85,8 @@ def run_settings() -> None:
             available_values = getattr(SettingsOptions, arguments.change[0]).value
             while True:
                 try:
-                    value = arguments.name[0]
-                except IndexError:
+                    value = arguments.value[0]
+                except TypeError:
                     value = input(f"Available options are {available_values}: ")
                 if value in available_values:
                     setattr(settings, arguments.change[0], value)
@@ -96,8 +96,8 @@ def run_settings() -> None:
         except AttributeError:
             while True:
                 try:
-                    value = arguments.name[0]
-                except IndexError:
+                    value = arguments.value[0]
+                except TypeError:
                     value = input(f"Enter new value for {arguments.change[0]}: ")
                 if value:
                     try:
@@ -142,6 +142,7 @@ def main() -> None:
     parser.add_argument("-m", "--model", type=str, help="What type of model to train",
                         choices=["autoencoder", "classifier"], nargs=1)
     parser.add_argument("-n", "--name", type=str, help="Name of the model", nargs=1)
+    parser.add_argument("-v", "--value", type=str, help="Settings value", nargs=1)
     global arguments
     arguments = parser.parse_args()
     if arguments.command == "predict" or arguments.command == "train" or arguments.command == "validate":

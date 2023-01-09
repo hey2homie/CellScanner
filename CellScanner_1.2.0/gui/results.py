@@ -9,7 +9,7 @@ from plotly.express import scatter_3d, scatter
 from utilities.visualizations import MplVisualization
 from utilities.helpers import create_output_dir, save_cell_counts, get_plotting_info, create_dataframe_vis
 
-from gui.widgets import Widget, Button, FileBox, InputDialog
+from gui.widgets import Widget, Button, FileBox, InputDialog, MessageBox
 
 
 class ResultsClassification(Widget):
@@ -109,13 +109,11 @@ class ResultsClassification(Widget):
         layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                              font=dict(family="Avenir", size=8, color="black"))
         self.graph_outputs.update_layout(legend=layout_legend)
-        self.graph_outputs.update_layout({"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"})     # TODO: Remove later
         if "Correctness" in self.data.columns:  # Case for diagnostics
             self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Labels")
         else:
             self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
         self.graph_mse_err.update_layout(legend=layout_legend)
-        self.graph_mse_err.update_layout({"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"})     # TODO: Remove later
         self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
 
     def change_plot(self, plot_type: str) -> None:
@@ -145,8 +143,10 @@ class ResultsClassification(Widget):
                 self.settings.mse_threshold = float(mse)
                 self.graph_mse_err.update_shapes(dict(y0=self.settings.mse_threshold, y1=self.settings.mse_threshold))
                 self.browser.setHtml(self.graph_mse_err.to_html(include_plotlyjs="cdn"))
+                self.stack.widget(4).set_values_from_config()
+                self.stack.widget(4).update_config()
             except ValueError:
-                print("Invalid MSE threshold")
+                MessageBox.about(self, "Warning", "Invalid MSE threshold")
 
     def save_results(self) -> None:
         """

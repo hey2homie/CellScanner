@@ -1,5 +1,5 @@
 autoencoders:
-  ae_cytoflew.h5:
+  ae_cytoflex.h5:
   - fc_type: Cytoflex
   - features:
     - FSC-H
@@ -44,104 +44,6 @@ autoencoders:
     - Width
   - num_features: 13
 classifiers:
-  515_1315_avg.h5:
-  - fc_type: Accuri
-  - features_shape: 13
-  - labels_map:
-      0: 1315Z
-      1: 515Z
-  - labels_shape: 2
-  - files_used:
-    - 515Z-mono t16.5-1 10.fcs
-    - 515Z-mono t16.5-2 10.fcs
-    - 515Z-mono t16.5-3 10.fcs
-    - 515Z-mono t28.5-1 1000.fcs
-    - 515Z-mono t28.5-2 1000.fcs
-    - 515Z-mono t28.5-3 1000.fcs
-    - 515Z-mono t72-2 10^4.fcs
-    - 515Z-mono t72-3 10^4.fcs
-    - 515Z-mono t72-1 10^4.fcs
-    - 1315Z-mono t28.5-1 100.fcs
-    - 1315Z-mono t28.5-2 100.fcs
-    - 1315Z-mono t28.5-3 100.fcs
-    - 1315Z-mono t72-3 10^4.fcs
-    - 1315Z-mono t72-2 10^4.fcs
-    - 1315Z-mono t72-1 10^4.fcs
-  - autoencoder: ae.h5
-  78R_124Z_Start_End.h5:
-  - fc_type: Accuri
-  - features_shape: 13
-  - labels_map:
-      0: 124Z
-      1: 78R
-  - labels_shape: 2
-  - files_used:
-    - 78R-mono t16.5-1 100.fcs
-    - 78R-mono t16.5-2 100.fcs
-    - 78R-mono t16.5-3 100.fcs
-    - 78R-mono t72-1 10^5.fcs
-    - 78R-mono t72-2 10^5.fcs
-    - 78R-mono t72-3 10^5.fcs
-    - 124Z-mono t72-3 10^4.fcs
-    - 124Z-mono t72-2 10^4.fcs
-    - 124Z-mono t72-1 10^4.fcs\
-    - 124Z-mono t16.5-1 10.fcs
-    - 124Z-mono t16.5-2 10.fcs
-    - 124Z-mono t16.5-3 10.fcs
-  - autoencoder: ae.h5
-  515Z_1315Z_16.5.h5:
-  - fc_type: Accuri
-  - features_shape: 13
-  - labels_map:
-      0: 1315Z
-      1: 515Z
-  - labels_shape: 2
-  - files_used:
-    - 515Z-mono t16.5-1 10.fcs
-    - 515Z-mono t16.5-2 10.fcs
-    - 515Z-mono t16.5-3 10.fcs
-    - 1315Z-mono t16.5-1 10.fcs
-    - 1315Z-mono t16.5-2 10.fcs
-    - 1315Z-mono t16.5-3 10.fcs
-  - autoencoder: ae.h5
-  1315_78_avg.h5:
-  - fc_type: Accuri
-  - features_shape: 13
-  - labels_map:
-      0: 124Z
-      1: 78R
-  - labels_shape: 2
-  - files_used:
-    - 78R-mono t16.5-1 100.fcs
-    - 78R-mono t16.5-2 100.fcs
-    - 78R-mono t16.5-3 100.fcs
-    - 78R-mono t24-1 100.fcs
-    - 78R-mono t24-2 100.fcs
-    - 78R-mono t24-3 100.fcs
-    - 78R-mono t72-1 10^5.fcs
-    - 78R-mono t72-2 10^5.fcs
-    - 78R-mono t72-3 10^5.fcs
-    - 124Z-mono t16.5-1 10.fcs
-    - 124Z-mono t16.5-2 10.fcs
-    - 124Z-mono t16.5-3 10.fcs
-    - 124Z-mono t24-1 10.fcs
-    - 124Z-mono t24-2 10.fcs
-    - 124Z-mono t24-3 10.fcs
-    - 124Z-mono t72-1 10^4.fcs
-    - 124Z-mono t72-2 10^4.fcs
-    - 124Z-mono t72-3 10^4.fcs
-  - autoencoder: ae.h5
-  cyto_test.h5:
-  - fc_type: Cytoflex
-  - features_shape: 23
-  - labels_map:
-      0: Bacteroides vulgatus
-      1: Blautia hydrogenotrophica
-  - labels_shape: 2
-  - files_used:
-    - Bacteroides_vulgatus_20210225.fcs
-    - Blautia_hydrogenotrophica_20201020.fcs
-  - autoencoder: ae_cytoflew.h5
   ec_bw.h5:
   - fc_type: Accuri
   - features_shape: 13
@@ -152,19 +54,17 @@ classifiers:
   - files_used:
     - Bilophila_wadsworthia-100519-GAM-d10-1.fcs
     - Escherichia_coli-050520-mGAM-1.fcs
-  - autoencoder: ae_cytoflew.h5
-  515Z_1315Z_72.h5:
+  - autoencoder: ae_cytoflex.h5
+  ba_ec_pm.h5:
   - fc_type: Accuri
   - features_shape: 13
   - labels_map:
-      0: 1315Z
-      1: 515Z
-  - labels_shape: 2
+      0: Bifidobacterium adolescentis
+      1: Escherichia coli
+      2: Parabacteroides merdae
+  - labels_shape: 3
   - files_used:
-    - 515Z-mono t72-3 10^4.fcs
-    - 515Z-mono t72-2 10^4.fcs
-    - 515Z-mono t72-1 10^4.fcs
-    - 1315Z-mono t72-1 10^4.fcs
-    - 1315Z-mono t72-2 10^4.fcs
-    - 1315Z-mono t72-3 10^4.fcs
+    - Bifidobacterium_adolescentis-050520-mGAM-1.fcs
+    - Escherichia_coli-050520-mGAM-1.fcs
+    - Parabacteroides_merdae-141019-GAM-1.fcs
   - autoencoder: ae.h5

@@ -76,7 +76,8 @@ def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_thresho
                                            "Number of blanks": int(blanks_label),
                                            "Percentage of blanks": float(percentage_blanks),
                                            "Number of high probability": int(probs_label),
-                                           "Percentage of high probability": float(percentage_probs)}
+                                           "Percentage of high probability": float(percentage_probs),
+                                           "Results after gating": int(labels_count[label]) - int(blanks_label)}
         yaml.dump(output, file, default_flow_style=False, sort_keys=False)
 
 

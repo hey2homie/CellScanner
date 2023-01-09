@@ -167,9 +167,7 @@ class FilePreparation:
                 name = split[0] + " " + split[1]
             except IndexError:
                 name = split[0]
-            if gating:
-                name = "blank" if "blank" in name.lower() else "cell"
-        labels.append(name)
+            labels.append(name)
         return np.array(labels)
 
     def get_prepared_inputs(self) -> dict:

@@ -78,6 +78,9 @@ class FileSelector(Widget):
                 self.stack.setGeometry(*[300, 300, 1080, 700])
                 self.stack.center()
             else:
+                if settings.model == "":
+                    MessageBox.about(self, "Warning", "Model is not provided")
+                    return
                 diagnostics = False if self.action == "Prediction" else True
                 files = self.children()[0].get_files()
                 model = ClassificationModel(settings=settings, model_info=models_info, files=files,

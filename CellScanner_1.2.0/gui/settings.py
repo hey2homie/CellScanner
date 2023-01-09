@@ -88,12 +88,15 @@ class SettingsWindow(Widget):
         Button(text="Menu", obj_name="standard", geometry=[46, 655, 200, 60], parent=self)
         Button(text="Apply", obj_name="standard", geometry=[652, 655, 200, 60], parent=self)
         overlay_classifier = TextEdit(obj_name="overlay", name="classifier", geometry=[297, 286, 300, 100], parent=self)
-        overlay_ae = TextEdit(obj_name="overlay", name="ae", geometry=[305, 467, 300, 100], parent=self)
+        overlay_ae = TextEdit(obj_name="overlay", name="ae", geometry=[305, 427, 300, 140], parent=self)
 
         overlay_ae.hide()
         overlay_ae.setText(self.model_info.get_readable(model="ae", name=self.settings.autoencoder))
         overlay_classifier.hide()
-        overlay_classifier.setText(self.model_info.get_readable(model="classifier", name=self.settings.model))
+        try:
+            overlay_classifier.setText(self.model_info.get_readable(model="classifier", name=self.settings.model))
+        except KeyError:
+            overlay_classifier.setText("No classifier selected")
 
         fc.currentIndexChanged.connect(lambda: self.__update_fc_related(fc, channels_input, cols_drop,
                                                                         aes, classifiers))
@@ -214,7 +217,8 @@ class SettingsWindow(Widget):
                     try:
                         child.setCurrentIndex(items.index(getattr(self.settings, child.name)))
                     except ValueError:
-                        child.setCurrentIndex(items.index(str(getattr(self.settings, child.name))))
+                        if getattr(self.settings, child.name) != "":
+                            child.setCurrentIndex(items.index(str(getattr(self.settings, child.name))))
                 elif isinstance(child, CheckableComboBox):
                     fc = "_accuri" if self.settings.fc_type == "Accuri" else "_cytoflex"
                     child.set_checked_items(getattr(self.settings, child.name + fc))
