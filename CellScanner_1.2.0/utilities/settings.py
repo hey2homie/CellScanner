@@ -15,6 +15,7 @@ class SettingsOptions(Enum):
     autoencoder = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
     vis_type = ["UMAP", "Channels"]
     vis_dims = ["2", "3"]
+    # TODO: Remove vis_channels and rely solely on the channels of the autoencoder
     vis_channels_accuri = ["FSC-A", "SSC-A", "FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H",
                            "FL3-H", "FL4-H", "Width"]
     vis_channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",

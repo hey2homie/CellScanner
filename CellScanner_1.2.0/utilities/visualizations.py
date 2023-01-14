@@ -92,7 +92,7 @@ class MplVisualization:
 
     def save_predictions_visualizations(self, inputs: dict, settings: Settings) -> None:
         """
-        Saves the visualizations of the prediction results.
+        Saves the visualizations of the prediction results. Can be either 2D or 3D scatter plots.
         Args:
             inputs (dict): Dictionary containing the results of prediction.
             settings (Settings): Settings object containing the settings of the model.
@@ -162,7 +162,8 @@ class MplVisualization:
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
                     predicted_labels_probs: np.ndarray, mse: np.ndarray, mse_threshold: float) -> np.ndarray:
         """
-        Calculates diagnostic metrics for the model.
+        Creates plots that are used to access the performance of the model. Plots include ROC curve, precision-recall
+        pie chart of overall accuracy, aggregated confusion matrix, and MSE histogram.
         Args:
             true_labels (np.ndarray): True labels.
             predicted_labels (np.ndarray): Predicted labels.
@@ -177,8 +178,8 @@ class MplVisualization:
             :meth:`__pie`.
             :meth:`__roc`.
             :meth:`__precision_recall`.
-            :meth:`__confusion_matrices`.
             :meth:`__aggregated_matrix`.
+            :meth:`__mse`.
         """
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:
             raise ValueError("Number of classes in true and predicted labels are not equal")
@@ -281,11 +282,11 @@ class MplVisualization:
                 average_precision[i] = average_precision_score(true_labels[:, i], predicted_labels_probs[:, i])
             _, ax = plt.subplots(figsize=(7, 8))
             f_scores = np.linspace(0.2, 0.8, num=4)
-            l = None
+            iso_curves = None
             for f_score in f_scores:
                 x = np.linspace(0.01, 1)
                 y = f_score * x / (2 * x - f_score)
-                (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
+                (iso_curves,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
                 plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
             display = None
             for i, color in zip(range(self.n_classes), self.colors):
@@ -293,7 +294,7 @@ class MplVisualization:
                                                  average_precision=average_precision[i])
                 display.plot(ax=ax, name=f"Precision-recall for {self.classes[i]}", color=color)
             handles, labels = display.ax_.get_legend_handles_labels()
-            handles.extend([l])
+            handles.extend([iso_curves])
             labels.extend(["Iso-f1 curves"])
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
@@ -317,6 +318,7 @@ class MplVisualization:
         true_labels, true_labels_counts = np.unique(true_labels, return_inverse=True)
         _, predicted_labels_counts = np.unique(predicted_labels, return_inverse=True)
         cm = confusion_matrix(true_labels_counts, predicted_labels_counts)
+        plt.figure()
         plot_confusion_matrix(conf_mat=cm, class_names=true_labels, figsize=(7, 8), show_normed="true")
         plt.tight_layout()
         plt.title("Confusion Matrix")
@@ -324,6 +326,15 @@ class MplVisualization:
         plt.close()
 
     def __mse_scatter(self, mse: np.ndarray, true_labels: np.ndarray, mse_threshold: float) -> None:
+        """
+        Creates scatter plot of MSE values.
+        Args:
+            mse (np.ndarray): MSE values.
+            true_labels (np.ndarray): True labels.
+            mse_threshold (float): Threshold for MSE values.
+        Returns:
+            None.
+        """
         plt.figure(figsize=(7, 7))
         uniq_labels, _ = np.unique(true_labels, return_inverse=True)
         for label, color in zip(uniq_labels, self.colors):

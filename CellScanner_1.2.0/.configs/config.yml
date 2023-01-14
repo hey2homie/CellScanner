@@ -11,12 +11,12 @@ lr: 1e-3
 lr_scheduler: Step Decay
 mlp: false
 model: ba_ec_pm.h5
-mse_threshold: 0.2
+mse_threshold: 0.5
 num_batches: 256
 num_epochs: 50
 num_umap_cores: 4
 number_of_clusters: 10
-results: /Users/v_vlsv/PyCharmProjects/CellScanner/CellScanner_1.2.0/outputs
+results: ./outputs
 softmax_prob_threshold: 0.9
 vis_channels_accuri:
 - FSC-A

@@ -5,6 +5,7 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from keras import backend as k
 from keras.models import Model, Sequential
 from keras.layers import InputLayer, Lambda, BatchNormalization, Conv1D, MaxPooling1D, Dense, Activation, Flatten, \
     Dropout
@@ -147,22 +148,21 @@ class AppModels(ABC):
                 loss = CategoricalCrossentropy(from_logits=False)
                 metrics.extend([CategoricalAccuracy(), Precision(), Recall()])
             else:
-                from keras import backend as K
 
-                def precision(y_true, y_pred):
-                    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-                    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-                    precision = true_positives / (predicted_positives + K.epsilon())
+                def precision_metric(y_true, y_pred):
+                    true_positives = k.sum(k.round(k.clip(y_true * y_pred, 0, 1)))
+                    predicted_positives = k.sum(k.round(k.clip(y_pred, 0, 1)))
+                    precision = true_positives / (predicted_positives + k.epsilon())
                     return precision
 
-                def recall(y_true, y_pred):
-                    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-                    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-                    recall = true_positives / (possible_positives + K.epsilon())
+                def recall_metric(y_true, y_pred):
+                    true_positives = k.sum(k.round(k.clip(y_true * y_pred, 0, 1)))
+                    possible_positives = k.sum(k.round(k.clip(y_true, 0, 1)))
+                    recall = true_positives / (possible_positives + k.epsilon())
                     return recall
 
                 loss = BinaryCrossentropy(from_logits=False)
-                metrics.extend([BinaryAccuracy(), precision, recall])
+                metrics.extend([BinaryAccuracy(), precision_metric, recall_metric])
             self.model.compile(optimizer=Adam(float(self.settings.lr)), loss=loss, metrics=metrics)
         else:
             self.model.compile(optimizer=Adam(1e-3), loss="mse")
@@ -299,8 +299,8 @@ class ClassificationModel(AppModels):
             Returns:
                 float: Adjusted learning rate.
             """
-            k = 0.1
-            return float(self.settings.lr) * np.exp(-k * epoch)
+            rate = 0.1
+            return float(self.settings.lr) * np.exp(-rate * epoch)
 
         data = self.file_prep.get_aggregated()
         dataframe, labels, files = data["data"], data["labels"], data["files"]
@@ -472,13 +472,14 @@ class AutoEncoder(AppModels):
         Returns:
             data_clean (np.ndarray): Numpy array of the data without outliers, which is used to train the model.
         """
+        clusters: list
         clusters = remaining_clusters.tolist()
-        for k in remaining_clusters:
-            if dataframe[np.where(y_predicted == k)].shape[0] < 5:
-                clusters.remove(k)
+        for cluster in remaining_clusters:
+            if dataframe[np.where(y_predicted == cluster)].shape[0] < 5:
+                clusters.remove(cluster)
         gm_per_cluster = [
-            GaussianMixture(n_components=1, n_init=10, random_state=42).fit(dataframe[np.where(y_predicted == k)])
-            for k in clusters]
+            GaussianMixture(n_components=1, n_init=10, random_state=42).fit(dataframe[np.where(y_predicted == cluster)])
+            for cluster in clusters]
         data_clustered = {}
         for i in clusters:
             data_clustered[i] = np.take(dataframe, np.where(y_predicted == i), axis=0)[0]
@@ -486,6 +487,7 @@ class AutoEncoder(AppModels):
         data_clustered_clean = {}
         count = 0
         for i in clusters:
+            gm_per_cluster: [GaussianMixture]
             densities = gm_per_cluster[count].score_samples(data_clustered[i])
             density_threshold = np.percentile(densities, 4)
             data_clustered_clean[i] = data_clustered[i][densities > density_threshold]

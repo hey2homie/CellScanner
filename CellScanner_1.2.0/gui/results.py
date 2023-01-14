@@ -101,7 +101,16 @@ class ResultsClassification(Widget):
         self.children()[3].setText("MSE")
         self.browser.setHtml(self.graph_outputs.to_html(include_plotlyjs="cdn"))
 
-    def __make_plot(self, names: list, color: str):
+    def __make_plot(self, names: list, color: str) -> None:
+        """
+        Creates the plots for the current file. Can be either a 3D scatter plot or a 2D scatter plot. Also, creates plot
+        for the MSE reconstruction error.
+        Args:
+            names (list): List of names of the columns in the dataframe.
+            color (str): Name of the column to use as the color for the plots.
+        Returns:
+            None.
+        """
         if self.settings.vis_dims == 2:
             self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
         else:
@@ -109,10 +118,8 @@ class ResultsClassification(Widget):
         layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                              font=dict(family="Avenir", size=8, color="black"))
         self.graph_outputs.update_layout(legend=layout_legend)
-        if "Correctness" in self.data.columns:  # Case for diagnostics
-            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Labels")
-        else:
-            self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color="Species")
+        color_mse = "Labels" if color == "Correctness" else "Species"
+        self.graph_mse_err = scatter(self.data, x=self.data.index, y="MSE", color=color_mse)
         self.graph_mse_err.update_layout(legend=layout_legend)
         self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
 

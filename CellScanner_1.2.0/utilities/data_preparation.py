@@ -1,12 +1,9 @@
-import warnings
 from typing import Tuple
 
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 import fcsparser
-
-from sklearn.neural_network import MLPClassifier
 
 from utilities.settings import Settings, ModelsInfo
 
@@ -48,7 +45,6 @@ class FilePreparation:
         self.data = {}
         self.training_cls = training_cls
         self.gating = True
-        self.classifier_gating = None
 
     def __clean_files(self) -> None:
         """
@@ -121,7 +117,7 @@ class FilePreparation:
                 dataframe[column] = np.arcsinh(dataframe[column].values)
         return dataframe
 
-    def __gate(self, dataframe: pd.DataFrame, file: str) -> Tuple[np.ndarray, np.ndarray]:
+    def __gate(self, dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
         """
         Performs gating on the input dataframe. Can be done either by using the autoencoder or by using the
         implementation from the previous version of CellScanner. In case of using the autoencoder, the reconstruction
@@ -129,7 +125,6 @@ class FilePreparation:
         cell, or some sort of artifact. When training the autoencoder, the whole step is skipped.
         Args:
             dataframe (pd.DataFrame): Dataframe to be gated.
-            file (str): Path to the file, which is currently being processed.
         Returns:
             data (np.ndarray): Passed dataframe but converted to np.ndarray.
             mse (np.ndarray): Reconstruction error for each observation.
@@ -150,7 +145,7 @@ class FilePreparation:
         return np.array(dataframe), mse
 
     @staticmethod
-    def __add_labels(file: str, length: int, gating: bool = False) -> np.ndarray:
+    def __add_labels(file: str, length: int) -> np.ndarray:
         """
         Static method. Adds labels to the input dataframe. Labels are added based on the file name. Files are expected
         to be named in the following formats: "Name-name_...fcs" or "Name_...fcs".
@@ -179,14 +174,9 @@ class FilePreparation:
         self.__clean_files()
         for file in self.files_list:
             self.data[file] = self.__convert(file=file)
-            try:
-                self.data[file], features = self.__drop_columns(self.data[file])
-            except TypeError:
-                warnings.warn(f"The {file} comes from a different flow cytometer", category=UserWarning)
-                self.data.pop(file)
-                pass
+            self.data[file], features = self.__drop_columns(self.data[file])
             self.data[file] = self.__scale(self.data[file])
-            self.data[file], mse = self.__gate(self.data[file], file=file)
+            self.data[file], mse = self.__gate(self.data[file])
             labels = self.__add_labels(file=file, length=self.data[file].shape[0])
             self.data[file] = {"data": self.data[file], "mse": mse, "labels": labels, "features": features}
         return self.data

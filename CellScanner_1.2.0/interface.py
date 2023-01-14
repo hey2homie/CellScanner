@@ -8,9 +8,11 @@ from utilities.visualizations import MplVisualization
 from utilities.helpers import create_output_dir, save_cell_counts
 
 
-def run_prediction() -> None:
+def run_prediction(arguments: argparse.Namespace) -> None:
     """
     Depending on the command, runs the prediction, training or validation.
+    Args:
+        arguments (argparse.Namespace): Arguments provided by argparse.
     Returns:
         None.
     Raises:
@@ -70,9 +72,11 @@ def run_prediction() -> None:
             raise argparse.ArgumentTypeError("No arguments provided")
 
 
-def run_settings() -> None:
+def run_settings(arguments: argparse.Namespace) -> None:
     """
     Shows settings or allows to change them.
+    Args:
+        arguments (argparse.Namespace): Arguments provided by argparse.
     Returns:
         None.
     Raises:
@@ -143,12 +147,11 @@ def main() -> None:
                         choices=["autoencoder", "classifier"], nargs=1)
     parser.add_argument("-n", "--name", type=str, help="Name of the model", nargs=1)
     parser.add_argument("-v", "--value", type=str, help="Settings value", nargs=1)
-    global arguments
     arguments = parser.parse_args()
     if arguments.command == "predict" or arguments.command == "train" or arguments.command == "validate":
-        run_prediction()
+        run_prediction(arguments)
     elif arguments.command == "settings":
-        run_settings()
+        run_settings(arguments)
 
 
 if __name__ == "__main__":

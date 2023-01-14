@@ -28,6 +28,14 @@ def set_tf_hardware(hardware: str) -> None:
 
 
 def get_available_models_fc(models: dict, fc: str) -> list:
+    """
+    For a given flow cytometer, return list of available models. Can be either list of autoencoders or classifiers.
+    Args:
+        models (dict): Dictionary of models.
+        fc (str): Flow cytometer.
+    Returns:
+        available_models (list): List of available models.
+    """
     available_models = []
     for key, value in models.items():
         if value[0]["fc_type"] == fc.split("_")[1].capitalize():
@@ -36,6 +44,14 @@ def get_available_models_fc(models: dict, fc: str) -> list:
 
 
 def get_available_cls(classifiers: dict, ae: str) -> list:
+    """
+    For a given autoencoder, return list of compatible classifiers.
+    Args:
+        classifiers (dict): Dictionary of classifiers.
+        ae (str): Name of the autoencoder.
+    Returns:
+        available_models (list): List of available classifiers.
+    """
     available_models = []
     for key, value in classifiers.items():
         if value[-1]["autoencoder"] == ae:
@@ -44,6 +60,13 @@ def get_available_cls(classifiers: dict, ae: str) -> list:
 
 
 def create_output_dir(path: str) -> str:
+    """
+    Create a directory for the output, with today's date as folder name.
+    Args:
+        path (str): Path to the output directory.
+    Returns:
+        output_path (str): Path to the output directory.
+    """
     if not os.path.exists(path):
         os.makedirs(path)
     output_path = path + "/" + datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + "/"
@@ -52,6 +75,16 @@ def create_output_dir(path: str) -> str:
 
 
 def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_threshold: float) -> None:
+    """
+    Save the prediction results to the txt files.
+    Args:
+        path (str): Path to the output directory.
+        inputs (dict): Dictionary of inputs.
+        mse_threshold (float): Threshold for the MSE.
+        prob_threshold (float): Threshold for the probability.
+    Returns:
+        None
+    """
     with open(path + "cell_counts.txt", "w") as file:
         output = {}
         for key, value in inputs.items():
@@ -82,7 +115,16 @@ def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_thresho
 
 
 def get_plotting_info(settings, data: np.ndarray) -> Tuple[list, list]:
-    from utilities.settings import SettingsOptions
+    """
+    Get the plotting information (axis content, axis names) for the scatter plots.
+    Args:
+        settings (Settings): Settings object.
+        data (np.ndarray): Data used for plotting.
+    Returns:
+        dataframe (list): List containing lists representing the data for each axis.
+        names (list): List containing the names of the axes.
+    """
+    from .settings import SettingsOptions
     if settings.vis_type == "UMAP":
         names = ["X", "Y", "Z"]
         dataframe = data["embeddings"]
@@ -101,6 +143,18 @@ def get_plotting_info(settings, data: np.ndarray) -> Tuple[list, list]:
 
 
 def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> Tuple[pd.DataFrame, str]:
+    """
+    Create a dataframe for the scatter plots used for the visualisations.
+    Args:
+        settings (Settings): Settings object.
+        data (dict): Dictionary containing all additional data apart from main dataframe with channels content.
+        data_vis (list): List containing lists representing the data for each axis.
+        names (list): List containing the names of the axes.
+    Returns:
+        dataframe (pd.DataFrame): Dataframe containing the data for the scatter plots.
+        color (str): Name of the column that will be used for color differentiation: either predicted labels or
+        correct/incorrect label.
+    """
     if settings.vis_dims == 2:
         dataframe = pd.DataFrame({names[0]: data_vis[0].astype(np.float32),
                                   names[1]: data_vis[1].astype(np.float32)})
@@ -123,11 +177,29 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
 
 
 def match_blanks_to_mse(predicted_labels: np.ndarray, mse: np.ndarray, threshold: float) -> np.ndarray:
+    """
+    Labels events as blanks if the corresponding MSE is above the threshold.
+    Args:
+        predicted_labels (np.ndarray): Predicted labels.
+        mse (np.ndarray): Mean squared error for each event.
+        threshold (float): Threshold for the MSE.
+    Returns:
+        predicted_labels (np.ndarray): Predicted labels with outliers labelled as blanks.
+    """
     np.place(predicted_labels, mse > threshold, "Blank")
     return predicted_labels
 
 
 def drop_blanks(true_labels: np.ndarray, predicted_probs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Drop blanks from the true labels and predicted probabilities.
+    Args:
+        true_labels (np.ndarray): True labels.
+        predicted_probs (np.ndarray): Predicted probabilities.
+    Returns:
+        true_labels (np.ndarray): True labels without blanks.
+        predicted_probs (np.ndarray): Predicted probabilities without blanks.
+    """
     indices = np.where(true_labels != "Blank")[0]
     true_labels = true_labels[indices]
     predicted_labels = predicted_probs[indices]
