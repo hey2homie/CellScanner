@@ -74,12 +74,13 @@ def create_output_dir(path: str) -> str:
     return output_path
 
 
-def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_threshold: float) -> None:
+def save_cell_counts(path: str, inputs: dict, gating_type: str, mse_threshold: float, prob_threshold: float) -> None:
     """
     Save the prediction results to the txt files.
     Args:
         path (str): Path to the output directory.
         inputs (dict): Dictionary of inputs.
+        gating_type (str): Type of gating.
         mse_threshold (float): Threshold for the MSE.
         prob_threshold (float): Threshold for the probability.
     Returns:
@@ -90,15 +91,15 @@ def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_thresho
         for key, value in inputs.items():
             output[key] = {}
             labels = inputs[key]["labels"]
-            mse = inputs[key]["mse"]
+            gating_results = inputs[key]["gating_results"]
             probs = inputs[key]["probability_pred"]
             labels_count = np.unique(labels, return_counts=True)
             labels_count = dict(zip(labels_count[0], labels_count[1]))
             all_cells = sum(labels_count.values())
             for label in labels_count.keys():
                 indices = np.where(labels == label)[0]
-                mse_label = mse[indices]
-                blanks_label = len(np.where(mse_label > mse_threshold)[0])
+                blanks_label = gating_results[indices]
+                blanks_label = get_blanks_count(gating_type, blanks_label, mse_threshold)
                 probs_label = probs[indices]
                 probs_label = len(np.where(probs_label > prob_threshold)[0])
                 percentage_cells = np.round(labels_count[label] / all_cells * 100, 2)
@@ -112,6 +113,23 @@ def save_cell_counts(path: str, inputs: dict, mse_threshold: float, prob_thresho
                                            "Percentage of high probability": float(percentage_probs),
                                            "Results after gating": int(labels_count[label]) - int(blanks_label)}
         yaml.dump(output, file, default_flow_style=False, sort_keys=False)
+
+
+def get_blanks_count(type_gating: str, gating_results: np.ndarray, mse_threshold: float) -> int:
+    """
+    Get the number of blanks.
+    Args:
+        type_gating (str): Type of gating.
+        gating_results (np.ndarray): Gating results.
+        mse_threshold (float): Threshold for the MSE.
+    Returns:
+        count (int): Number of blanks.
+    """
+    if type_gating == "Machine":
+        count = len(np.where(gating_results == "blank")[0])
+    else:
+        count = len(np.where(gating_results > mse_threshold)[0])
+    return count
 
 
 def get_plotting_info(settings, data: np.ndarray) -> Tuple[list, list]:
@@ -162,12 +180,15 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
         dataframe = pd.DataFrame({names[0]: data_vis[0].astype(np.float32),
                                   names[1]: data_vis[1].astype(np.float32),
                                   names[2]: data_vis[2].astype(np.float32)})
-    dataframe["Species"] = data["labels"].astype(str)
+    dataframe["Species"] = data["labels"].astype(np.str)
     dataframe["Probability"] = data["probability_best"].astype(np.float32)
-    dataframe["MSE"] = data["mse"].astype(np.float32)
     try:
-        dataframe["Labels"] = data["true_labels"].astype(str)
-        dataframe["Correctness"] = data["labels_compared"].astype(str)
+        dataframe["Gating_results"] = data["gating_results"].astype(np.float32)
+    except ValueError:
+        dataframe["Gating_results"] = data["gating_results"].astype(np.str)
+    try:
+        dataframe["Labels"] = data["true_labels"].astype(np.str)
+        dataframe["Correctness"] = data["labels_compared"].astype(np.str)
         color = "Correctness"
     except KeyError:
         color = "Species"
@@ -176,17 +197,22 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
     return dataframe, color
 
 
-def match_blanks_to_mse(predicted_labels: np.ndarray, mse: np.ndarray, threshold: float) -> np.ndarray:
+def match_blanks_to_predictions(predicted_labels: np.ndarray, gating_type: str, gating_results: np.ndarray,
+                                threshold: float) -> np.ndarray:
     """
     Labels events as blanks if the corresponding MSE is above the threshold.
     Args:
         predicted_labels (np.ndarray): Predicted labels.
-        mse (np.ndarray): Mean squared error for each event.
+        gating_type (str): Type of gating.
+        gating_results (np.ndarray): Mean squared error for each event.
         threshold (float): Threshold for the MSE.
     Returns:
         predicted_labels (np.ndarray): Predicted labels with outliers labelled as blanks.
     """
-    np.place(predicted_labels, mse > threshold, "Blank")
+    if gating_type == "Machine":
+        np.place(predicted_labels, gating_results == "blank", "Blank")
+    else:
+        np.place(predicted_labels, gating_results > threshold, "Blank")
     return predicted_labels
 
 
@@ -204,3 +230,23 @@ def drop_blanks(true_labels: np.ndarray, predicted_probs: np.ndarray) -> Tuple[n
     true_labels = true_labels[indices]
     predicted_labels = predicted_probs[indices]
     return true_labels, predicted_labels
+
+
+def split_files(files: list, gating_type: str = "Autoencoder") -> Tuple[list, list]:
+    """
+    Split the list of files into two lists: one with files used for prediction, another used for training Machine Gating
+    model.
+    Args:
+        files (list): List of files.
+        gating_type (str, optional): Type of gating.
+    Returns:
+        files_pred (list): List of files used for prediction.
+        files_refs (list): List of reference files.
+    """
+    if gating_type == "Machine":
+        files_pred, files_refs = [], []
+        for file in files:
+            files_refs.append(file) if "_ref" in file.lower() else files_pred.append(file)
+        return files_pred, files_refs
+    else:
+        return files, []

@@ -1,7 +1,7 @@
 from utilities.classification_utils import ClassificationModel, AutoEncoder
 
-from gui.widgets import Widget, DropBox, Button, EditLine, CheckBox, MessageBox
-
+from .widgets import Widget, DropBox, Button, EditLine, CheckBox, MessageBox
+from utilities.helpers import split_files
 
 class FileSelector(Widget):
     """
@@ -54,6 +54,7 @@ class FileSelector(Widget):
         Returns:
             None.
         """
+        files = self.children()[0].get_files()
         if self.children()[0].count() != 0:
             settings = self.stack.widget(0).settings
             models_info = self.stack.widget(0).models_info
@@ -63,7 +64,6 @@ class FileSelector(Widget):
                     MessageBox.about(self, "Warning", "Model name is not provided")
                     return
                 model_name = model_name + ".h5"
-                files = self.children()[0].get_files()
                 if self.children()[5].isChecked():
                     model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
                                         name=model_name, training_cls=False)
@@ -81,14 +81,13 @@ class FileSelector(Widget):
                 if settings.model == "":
                     MessageBox.about(self, "Warning", "Model is not provided")
                     return
-                diagnostics = False if self.action == "Prediction" else True
-                files = self.children()[0].get_files()
                 model = ClassificationModel(settings=settings, model_info=models_info, files=files,
                                             model_type="classifier", name=settings.model)
-                if diagnostics:
+                if self.action == "Tool\nDiagnostics":
                     outputs = model.run_diagnostics()
-                else:
+                elif self.action == "Prediction":
                     outputs = model.run_classification()
+                    files, _ = split_files(files, settings.gating_type)
                     self.stack.widget(2).set_items(files)
                 self.stack.widget(2).inputs = outputs
                 self.stack.widget(2).set_inputs()

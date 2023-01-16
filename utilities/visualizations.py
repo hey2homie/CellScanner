@@ -11,8 +11,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
 
-from utilities.helpers import drop_blanks
-from utilities.settings import Settings, SettingsOptions
+from .helpers import drop_blanks
+from .settings import Settings, SettingsOptions
 
 
 class UmapVisualization:
@@ -100,7 +100,7 @@ class MplVisualization:
             None.
         """
         for file, data in inputs.items():
-            dataframe, mse, labels = data["data"], data["mse"], data["labels"]
+            dataframe, gating_results, labels = data["data"], data["gating_results"], data["labels"]
             labels_uniq = np.unique(labels)
             file = file.split("/")[-1].split(".")[0]
             if settings.vis_type == "Channels":
@@ -122,11 +122,12 @@ class MplVisualization:
                 norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             else:
                 ax = fig.add_subplot()
-            mse_fig = plt.figure(figsize=(7, 7))
-            ax_mse = mse_fig.add_subplot()
+            if settings.gating_type == "Autoencoder":
+                mse_fig = plt.figure(figsize=(7, 7))
+                ax_mse = mse_fig.add_subplot()
+                mse = list(mse)
             col_x = list(map(float, dataframe[:, indexes[0]]))
             col_y = list(map(float, dataframe[:, indexes[1]]))
-            mse = list(mse)
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmap = cmap.from_list("Custom cmap", cmaplist, cmap.N)
             colors = cmap(np.linspace(0, 1, len(labels_uniq)))
@@ -140,27 +141,29 @@ class MplVisualization:
                     ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
                 else:
                     ax.scatter(axis_x, axis_y, c=color, label=label)
-                mse_axis_y = np.take(mse, indexes_plot, axis=0)
-                ax_mse.scatter(indexes_plot, mse_axis_y, c=color, label=label)
+                if settings.gating_type == "Autoencoder":
+                    mse_axis_y = np.take(mse, indexes_plot, axis=0)
+                    ax_mse.scatter(indexes_plot, mse_axis_y, c=color, label=label)
             ax.set_xlabel(channels_use[0])
             ax.set_ylabel(channels_use[1])
-            ax_mse.set_xlabel("Index")
-            ax_mse.set_ylabel("MSE")
-            ax_mse.axhline(y=settings.mse_threshold, color="r", linestyle="-")
-            ax_mse.set_title("Reconstruction Error for " + file)
             if settings.vis_dims == 3:
                 ax.set_zlabel(channels_use[2])
                 ax.set_title("3D Scatter Plot of " + file)
             else:
                 ax.set_title("2D Scatter Plot of " + file)
             ax.legend()
-            ax_mse.legend()
             fig.savefig(self.output_path + file + "_" + "predictions.png")
-            mse_fig.savefig(self.output_path + file + "_" + "mse.png")
+            if settings.gating_type == "Autoencoder":
+                ax_mse.set_xlabel("Index")
+                ax_mse.set_ylabel("MSE")
+                ax_mse.axhline(y=settings.mse_threshold, color="r", linestyle="-")
+                ax_mse.set_title("Reconstruction Error for " + file)
+                ax_mse.legend()
+                mse_fig.savefig(self.output_path + file + "_" + "mse.png")
             plt.close()
 
     def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
-                    predicted_labels_probs: np.ndarray, mse: np.ndarray, mse_threshold: float) -> np.ndarray:
+                    predicted_labels_probs: np.ndarray, gating_results: np.ndarray, mse_threshold: float) -> np.ndarray:
         """
         Creates plots that are used to access the performance of the model. Plots include ROC curve, precision-recall
         pie chart of overall accuracy, aggregated confusion matrix, and MSE histogram.
@@ -168,7 +171,7 @@ class MplVisualization:
             true_labels (np.ndarray): True labels.
             predicted_labels (np.ndarray): Predicted labels.
             predicted_labels_probs (np.ndarray): Probabilities of predicted labels.
-            mse (np.ndarray): Reconstruction errors.
+            gating_results (np.ndarray): Reconstruction errors.
             mse_threshold (float): Threshold for the reconstruction error.
         Returns:
             labels_compared (np.ndarray): Array of correct/incorrect labels.
@@ -192,7 +195,8 @@ class MplVisualization:
         self.__roc(true_labels_binarized, predicted_labels_probs)
         self.__precision_recall(true_labels_binarized, predicted_labels_probs)
         self.__confusion_matrix(true_labels, predicted_labels)
-        self.__mse_scatter(mse, true_labels, mse_threshold)
+        if type(gating_results[0]) == float:
+            self.__mse_scatter(gating_results, true_labels, mse_threshold)
         return labels_compared
 
     def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> np.ndarray:
@@ -322,7 +326,7 @@ class MplVisualization:
         plot_confusion_matrix(conf_mat=cm, class_names=true_labels, figsize=(7, 8), show_normed="true")
         plt.tight_layout()
         plt.title("Confusion Matrix")
-        plt.savefig(self.output_path + "confusion_matrix_no_blanks.png")
+        plt.savefig(self.output_path + "confusion_matrix.png")
         plt.close()
 
     def __mse_scatter(self, mse: np.ndarray, true_labels: np.ndarray, mse_threshold: float) -> None:

@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from utilities.settings import SettingsOptions
 from utilities.helpers import get_available_models_fc, get_available_cls
 
-from gui.widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit, CheckBox
+from .widgets import Widget, Button, HLine, ComboBox, CheckableComboBox, EditLine, Label, TextEdit, CheckBox
 
 
 class SettingsWindow(Widget):

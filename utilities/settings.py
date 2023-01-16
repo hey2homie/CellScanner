@@ -3,7 +3,7 @@ import os
 from glob import glob
 from enum import Enum
 
-from utilities.helpers import set_tf_hardware
+from .helpers import set_tf_hardware
 
 
 class SettingsOptions(Enum):
@@ -128,6 +128,8 @@ class Settings:
             for key, value in settings.items():
                 setattr(self, key, value)
         set_tf_hardware(self.hardware)
+        if not os.path.isdir(self.results):
+            os.mkdir(self.results)
 
     def save_settings(self, command_line: bool = False) -> None:
         """

@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 
-from gui.widgets import Widget, Label, TextEdit, Button
+from .widgets import Widget, Label, TextEdit, Button
 
 
 class AboutWindow(Widget):
@@ -28,6 +28,6 @@ class AboutWindow(Widget):
         Returns:
             str: Markdown text.
         """
-        with open("../README.MD", "r") as md:
+        with open("./README.MD", "r") as md:
             return md.read()
 

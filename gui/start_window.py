@@ -1,4 +1,4 @@
-from gui.widgets import Widget, Label, Button
+from .widgets import Widget, Label, Button
 from utilities.settings import Settings, ModelsInfo
 
 

@@ -147,8 +147,14 @@ structure is used:
 - Percentage of high probability. Number of high probability / number of cells.
 - Results after gating. Number of cells - number of blanks
 
+If ``Machine`` gating is selected, please provide reference files for the binary classifier. Files should include some
+bacterial monocultures, preferably of same species used for the prediction, as well as some blank files. Additionally,
+please add ``_ref`` to the end of the reference file's name. 
+
 ### Model diagnostics
 
 Model diagnostics is a tool that allows you to see how well the model was trained. Please, provide at least one file per
 class that model can predict including blanks files. Otherwise, is the error will bi raised and CellScanner 
 will be closed. Files' name should follow same notation as when providing reference files for the training.
+
+If ``Machine`` gating is selected, continue as described in the ``Predicting`` section.

@@ -18,10 +18,10 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
-from utilities.data_preparation import FilePreparation, DataPreparation
-from utilities.helpers import create_output_dir, match_blanks_to_mse
-from utilities.visualizations import MplVisualization, UmapVisualization
-from utilities.settings import Settings, ModelsInfo
+from .data_preparation import FilePreparation, DataPreparation
+from .helpers import create_output_dir, match_blanks_to_predictions
+from .visualizations import MplVisualization, UmapVisualization
+from .settings import Settings, ModelsInfo
 
 
 class AppModels(ABC):
@@ -70,7 +70,6 @@ class AppModels(ABC):
         Returns:
             None.
         """
-        tf.keras.utils.set_random_seed(40)
         if self.model_type == "classifier":
             num_features = self.model_info.get_features_shape_classifier()
             num_classes = self.model_info.get_labels_shape()
@@ -337,7 +336,7 @@ class ClassificationModel(AppModels):
         if diagnostics:
             data = self.file_prep.get_aggregated()
             dataframe = data["data"]
-            results["mse"], results["true_labels"] = data["mse"], data["labels"]
+            results["gating_results"], results["true_labels"] = data["gating_results"], data["labels"]
         results["data"] = dataframe
         predictions = self.model.predict(dataframe)
         if self.settings.vis_type == "UMAP":
@@ -365,7 +364,7 @@ class ClassificationModel(AppModels):
         outputs = self.file_prep.get_prepared_inputs()
         for key, data in outputs.items():
             outputs[key] = self.__make_predictions(dataframe=data["data"])
-            outputs[key]["mse"] = data["mse"]
+            outputs[key]["gating_results"] = data["gating_results"]
         return outputs
 
     def __diagnostic_plots(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
@@ -400,9 +399,10 @@ class ClassificationModel(AppModels):
         predicted_labels = outputs["labels"]
         true_labels = outputs["true_labels"]
         probs = outputs["probability_pred"]
-        mse = outputs["mse"]
-        predicted_labels = match_blanks_to_mse(predicted_labels, mse, self.settings.mse_threshold)
-        outputs["labels_compared"] = self.__diagnostic_plots(true_labels, predicted_labels, probs, mse)
+        gating_results = outputs["gating_results"]
+        predicted_labels = match_blanks_to_predictions(predicted_labels, self.settings.gating_type, gating_results,
+                                                       self.settings.mse_threshold)
+        outputs["labels_compared"] = self.__diagnostic_plots(true_labels, predicted_labels, probs, gating_results)
         return outputs
 
 

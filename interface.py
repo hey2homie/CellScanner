@@ -30,11 +30,10 @@ def run_prediction(arguments: argparse.Namespace) -> None:
                                     name=settings.model)
         results = model.run_classification()
         output_dir = create_output_dir(path=settings.results)
-        print(output_dir)
         visualizations = MplVisualization(output_path=output_dir)
         visualizations.save_predictions_visualizations(inputs=results, settings=settings)
-        save_cell_counts(path=output_dir, inputs=results, mse_threshold=settings.mse_threshold,
-                         prob_threshold=settings.softmax_prob_threshold)
+        save_cell_counts(path=output_dir, inputs=results, gating_type=settings.gating_type,
+                         mse_threshold=settings.mse_threshold, prob_threshold=settings.softmax_prob_threshold)
         print("\nClassification is finished")
     elif arguments.command == "validate":
         model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
