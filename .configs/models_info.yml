@@ -1,70 +1,70 @@
 autoencoders:
   ae_cytoflex.h5:
-  - fc_type: Cytoflex
-  - features:
-    - FSC-H
-    - FSC-A
-    - SSC-H
-    - SSC-A
-    - FITC-H
-    - FITC-A
-    - PerCP-H
-    - PerCP-A
-    - APC-H
-    - APC-A
-    - APC-A750-H
-    - APC-A750-A
-    - VSSC-H
-    - VSSC-A
-    - KO525-H
-    - KO525-A
-    - PE-H
-    - PE-A
-    - ECD-H
-    - ECD-A
-    - PI-H
-    - PI-A
-    - FSC-Width
-  - num_features: 23
+    - fc_type: Cytoflex
+    - features:
+        - FSC-H
+        - FSC-A
+        - SSC-H
+        - SSC-A
+        - FITC-H
+        - FITC-A
+        - PerCP-H
+        - PerCP-A
+        - APC-H
+        - APC-A
+        - APC-A750-H
+        - APC-A750-A
+        - VSSC-H
+        - VSSC-A
+        - KO525-H
+        - KO525-A
+        - PE-H
+        - PE-A
+        - ECD-H
+        - ECD-A
+        - PI-H
+        - PI-A
+        - FSC-Width
+    - num_features: 23
   ae.h5:
-  - fc_type: Accuri
-  - features:
-    - FSC-A
-    - SSC-A
-    - FL1-A
-    - FL2-A
-    - FL3-A
-    - FL4-A
-    - FSC-H
-    - SSC-H
-    - FL1-H
-    - FL2-H
-    - FL3-H
-    - FL4-H
-    - Width
-  - num_features: 13
+    - fc_type: Accuri
+    - features:
+        - FSC-A
+        - SSC-A
+        - FL1-A
+        - FL2-A
+        - FL3-A
+        - FL4-A
+        - FSC-H
+        - SSC-H
+        - FL1-H
+        - FL2-H
+        - FL3-H
+        - FL4-H
+        - Width
+    - num_features: 13
 classifiers:
   ec_bw.h5:
-  - fc_type: Accuri
-  - features_shape: 13
-  - labels_map:
-      0: Bilophila wadsworthia
-      1: Escherichia coli
-  - labels_shape: 2
-  - files_used:
-    - Bilophila_wadsworthia-100519-GAM-d10-1.fcs
-    - Escherichia_coli-050520-mGAM-1.fcs
-  - autoencoder: ae_cytoflex.h5
+    - fc_type: Accuri
+    - features_shape: 13
+    - labels_map:
+        0: Bilophila wadsworthia
+        1: Escherichia coli
+    - labels_shape: 2
+    - files_used:
+        - Bilophila_wadsworthia-100519-GAM-d10-1.fcs
+        - Escherichia_coli-050520-mGAM-1.fcs
+    - autoencoder: ae_cytoflex.h5
   ba_ec_pm.h5:
-  - fc_type: Accuri
-  - features_shape: 13
-  - labels_map:
-      0: Bifidobacterium adolescentis
-      1: Escherichia coli
-      2: Parabacteroides merdae
-  - labels_shape: 3
-  - files_used:
-    - Bifidobacterium_adolescentis-050520-mGAM-1.fcs
-    - Escherichia_coli-050520-mGAM-1.fcs
-    - Parabacteroides_merdae-141019-GAM-1.fcs
-  - autoencoder: ae.h5
+    - fc_type: Accuri
+    - features_shape: 13
+    - labels_map:
+        0: Bifidobacterium adolescentis
+        1: Escherichia coli
+        2: Parabacteroides merdae
+    - labels_shape: 3
+    - files_used:
+        - Bifidobacterium_adolescentis-050520-mGAM-1.fcs
+        - Escherichia_coli-050520-mGAM-1.fcs
+        - Parabacteroides_merdae-141019-GAM-1.fcs
+    - autoencoder: ae.h5

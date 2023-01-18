@@ -7,7 +7,12 @@ from PyQt6.QtWidgets import QGridLayout
 from plotly.express import scatter_3d, scatter
 
 from utilities.visualizations import MplVisualization
-from utilities.helpers import create_output_dir, save_cell_counts, get_plotting_info, create_dataframe_vis
+from utilities.helpers import (
+    create_output_dir,
+    save_cell_counts,
+    get_plotting_info,
+    create_dataframe_vis,
+)
 
 from .widgets import Widget, Button, FileBox, InputDialog, MessageBox
 
@@ -53,14 +58,32 @@ class ResultsClassification(Widget):
         self.__configurate_widgets()
 
     def __init_widgets(self) -> None:
-        self.widget_graph = Widget(obj_name="", geometry=[254, 43, 595, 450], parent=self)
+        self.widget_graph = Widget(
+            obj_name="", geometry=[254, 43, 595, 450], parent=self
+        )
         self.layout_graph = QGridLayout(parent=self.widget_graph)
         self.layout_graph.addWidget(self.browser)
-        self.file_box = FileBox(obj_name="select", geometry=[46, 43, 180, 450], parent=self)
-        Button(text="Menu", obj_name="standard", geometry=[46, 518, 180, 60], parent=self)
-        Button(text="Save Results", obj_name="standard", geometry=[669, 518, 180, 60], parent=self)
-        Button(text="MSE", obj_name="standard", geometry=[254, 518, 180, 60], parent=self)
-        Button(text="Adjust MSE", obj_name="standard", geometry=[462, 518, 180, 60], parent=self)
+        self.file_box = FileBox(
+            obj_name="select", geometry=[46, 43, 180, 450], parent=self
+        )
+        Button(
+            text="Menu", obj_name="standard", geometry=[46, 518, 180, 60], parent=self
+        )
+        Button(
+            text="Save Results",
+            obj_name="standard",
+            geometry=[669, 518, 180, 60],
+            parent=self,
+        )
+        Button(
+            text="MSE", obj_name="standard", geometry=[254, 518, 180, 60], parent=self
+        )
+        Button(
+            text="Adjust MSE",
+            obj_name="standard",
+            geometry=[462, 518, 180, 60],
+            parent=self,
+        )
 
     def __configurate_widgets(self) -> None:
         self.layout_graph.setContentsMargins(0, 0, 0, 0)
@@ -100,7 +123,9 @@ class ResultsClassification(Widget):
             value = self.file_box.currentItem().text()
             current_item = self.inputs[value]
         dataframe, names = get_plotting_info(self.settings, current_item)
-        self.data, color = create_dataframe_vis(self.settings, current_item, dataframe, names)
+        self.data, color = create_dataframe_vis(
+            self.settings, current_item, dataframe, names
+        )
         self.__make_plot(names, color)
         if self.settings.gating_type == "Autoencoder":
             self.children()[4].setText("MSE")
@@ -119,15 +144,27 @@ class ResultsClassification(Widget):
         if self.settings.vis_dims == 2:
             self.graph_outputs = scatter(self.data, x=names[0], y=names[1], color=color)
         else:
-            self.graph_outputs = scatter_3d(self.data, x=names[0], y=names[1], z=names[2], color=color)
-        layout_legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                             font=dict(family="Avenir", size=8, color="black"))
+            self.graph_outputs = scatter_3d(
+                self.data, x=names[0], y=names[1], z=names[2], color=color
+            )
+        layout_legend = dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(family="Avenir", size=8, color="black"),
+        )
         self.graph_outputs.update_layout(legend=layout_legend)
         if self.settings.gating_type == "Autoencoder":
             color_mse = "Labels" if color == "Correctness" else "Species"
-            self.graph_mse_err = scatter(self.data, x=self.data.index, y="Gating_results", color=color_mse)
+            self.graph_mse_err = scatter(
+                self.data, x=self.data.index, y="Gating_results", color=color_mse
+            )
             self.graph_mse_err.update_layout(legend=layout_legend)
-            self.graph_mse_err.add_hline(y=self.settings.mse_threshold, line_color="red")
+            self.graph_mse_err.add_hline(
+                y=self.settings.mse_threshold, line_color="red"
+            )
 
     def change_plot(self, plot_type: str) -> None:
         """
@@ -154,7 +191,9 @@ class ResultsClassification(Widget):
         if entered:
             try:
                 self.settings.mse_threshold = float(mse)
-                self.graph_mse_err.update_shapes(dict(y0=self.settings.mse_threshold, y1=self.settings.mse_threshold))
+                self.graph_mse_err.update_shapes(
+                    dict(y0=self.settings.mse_threshold, y1=self.settings.mse_threshold)
+                )
                 self.browser.setHtml(self.graph_mse_err.to_html(include_plotlyjs="cdn"))
                 self.stack.widget(4).set_values_from_config()
                 self.stack.widget(4).update_config()
@@ -169,9 +208,16 @@ class ResultsClassification(Widget):
         """
         output_dir = create_output_dir(path=self.settings.results)
         visualizations = MplVisualization(output_path=output_dir)
-        visualizations.save_predictions_visualizations(inputs=self.inputs, settings=self.settings)
-        save_cell_counts(path=output_dir, inputs=self.inputs, gating_type=self.settings.gating_type,
-                         mse_threshold=self.settings.mse_threshold, prob_threshold=self.settings.softmax_prob_threshold)
+        visualizations.save_predictions_visualizations(
+            inputs=self.inputs, settings=self.settings
+        )
+        save_cell_counts(
+            path=output_dir,
+            inputs=self.inputs,
+            gating_type=self.settings.gating_type,
+            mse_threshold=self.settings.mse_threshold,
+            prob_threshold=self.settings.softmax_prob_threshold,
+        )
 
     def clear(self) -> None:
         """
@@ -231,10 +277,14 @@ class ResultsTraining(Widget):
         self.__init_widgets()
 
     def __init_widgets(self) -> None:
-        self.widget_browser = Widget(obj_name="", geometry=[46, 43, 993, 550], parent=self)
+        self.widget_browser = Widget(
+            obj_name="", geometry=[46, 43, 993, 550], parent=self
+        )
         self.layout_graph = QGridLayout(parent=self.widget_browser)
         self.layout_graph.addWidget(self.browser)
-        Button(text="Menu", obj_name="standard", geometry=[46, 618, 200, 60], parent=self)
+        Button(
+            text="Menu", obj_name="standard", geometry=[46, 618, 200, 60], parent=self
+        )
 
     def run_tf_board(self, name: str) -> None:
         """
@@ -244,7 +294,9 @@ class ResultsTraining(Widget):
         Returns:
             None.
         """
-        self.tf_board = subprocess.Popen(["tensorboard", "--logdir=training_logs/" + name, "--port=6006"])
+        self.tf_board = subprocess.Popen(
+            ["tensorboard", "--logdir=training_logs/" + name, "--port=6006"]
+        )
         self.browser.load(QUrl("http://localhost:6006/#scalars"))
         self.widget_browser.layout().addWidget(self.browser)
         self.browser.reload()

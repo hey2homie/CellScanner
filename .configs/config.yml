@@ -1,9 +1,9 @@
 autoencoder: ae.h5
 blank_threshold: 5
 cols_to_drop_accuri:
-- Time
+  - Time
 cols_to_drop_cytoflex:
-- Time
+  - Time
 fc_type: Accuri
 gating_type: Autoencoder
 hardware: GPU
@@ -19,12 +19,12 @@ number_of_clusters: 10
 results: ./outputs
 softmax_prob_threshold: 0.9
 vis_channels_accuri:
-- FSC-A
-- SSC-A
-- SSC-H
+  - FSC-A
+  - SSC-A
+  - SSC-H
 vis_channels_cytoflex:
-- FSC-A
-- SSC-H
-- SSC-A
+  - FSC-A
+  - SSC-H
+  - SSC-A
 vis_dims: 3
 vis_type: Channels

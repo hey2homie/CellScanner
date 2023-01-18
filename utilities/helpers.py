@@ -74,7 +74,13 @@ def create_output_dir(path: str) -> str:
     return output_path
 
 
-def save_cell_counts(path: str, inputs: dict, gating_type: str, mse_threshold: float, prob_threshold: float) -> None:
+def save_cell_counts(
+    path: str,
+    inputs: dict,
+    gating_type: str,
+    mse_threshold: float,
+    prob_threshold: float,
+) -> None:
     """
     Save the prediction results to the txt files.
     Args:
@@ -99,23 +105,30 @@ def save_cell_counts(path: str, inputs: dict, gating_type: str, mse_threshold: f
             for label in labels_count.keys():
                 indices = np.where(labels == label)[0]
                 blanks_label = gating_results[indices]
-                blanks_label = get_blanks_count(gating_type, blanks_label, mse_threshold)
+                blanks_label = get_blanks_count(
+                    gating_type, blanks_label, mse_threshold
+                )
                 probs_label = probs[indices]
                 probs_label = len(np.where(probs_label > prob_threshold)[0])
                 percentage_cells = np.round(labels_count[label] / all_cells * 100, 2)
                 percentage_blanks = np.round(blanks_label / len(indices) * 100, 2)
                 percentage_probs = np.round(probs_label / len(indices) * 100, 2)
-                output[key][str(label)] = {"Number of cells": int(labels_count[label]),
-                                           "Percentage": float(percentage_cells),
-                                           "Number of blanks": int(blanks_label),
-                                           "Percentage of blanks": float(percentage_blanks),
-                                           "Number of high probability": int(probs_label),
-                                           "Percentage of high probability": float(percentage_probs),
-                                           "Results after gating": int(labels_count[label]) - int(blanks_label)}
+                output[key][str(label)] = {
+                    "Number of cells": int(labels_count[label]),
+                    "Percentage": float(percentage_cells),
+                    "Number of blanks": int(blanks_label),
+                    "Percentage of blanks": float(percentage_blanks),
+                    "Number of high probability": int(probs_label),
+                    "Percentage of high probability": float(percentage_probs),
+                    "Results after gating": int(labels_count[label])
+                    - int(blanks_label),
+                }
         yaml.dump(output, file, default_flow_style=False, sort_keys=False)
 
 
-def get_blanks_count(type_gating: str, gating_results: np.ndarray, mse_threshold: float) -> int:
+def get_blanks_count(
+    type_gating: str, gating_results: np.ndarray, mse_threshold: float
+) -> int:
     """
     Get the number of blanks.
     Args:
@@ -143,6 +156,7 @@ def get_plotting_info(settings, data: np.ndarray) -> Tuple[list, list]:
         names (list): List containing the names of the axes.
     """
     from .settings import SettingsOptions
+
     if settings.vis_type == "UMAP":
         names = ["X", "Y", "Z"]
         dataframe = data["embeddings"]
@@ -160,7 +174,9 @@ def get_plotting_info(settings, data: np.ndarray) -> Tuple[list, list]:
     return dataframe, names
 
 
-def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> Tuple[pd.DataFrame, str]:
+def create_dataframe_vis(
+    settings, data: dict, data_vis: list, names: list
+) -> Tuple[pd.DataFrame, str]:
     """
     Create a dataframe for the scatter plots used for the visualisations.
     Args:
@@ -174,12 +190,20 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
         correct/incorrect label.
     """
     if settings.vis_dims == 2:
-        dataframe = pd.DataFrame({names[0]: data_vis[0].astype(np.float32),
-                                  names[1]: data_vis[1].astype(np.float32)})
+        dataframe = pd.DataFrame(
+            {
+                names[0]: data_vis[0].astype(np.float32),
+                names[1]: data_vis[1].astype(np.float32),
+            }
+        )
     else:
-        dataframe = pd.DataFrame({names[0]: data_vis[0].astype(np.float32),
-                                  names[1]: data_vis[1].astype(np.float32),
-                                  names[2]: data_vis[2].astype(np.float32)})
+        dataframe = pd.DataFrame(
+            {
+                names[0]: data_vis[0].astype(np.float32),
+                names[1]: data_vis[1].astype(np.float32),
+                names[2]: data_vis[2].astype(np.float32),
+            }
+        )
     dataframe["Species"] = data["labels"].astype(np.str)
     dataframe["Probability"] = data["probability_best"].astype(np.float32)
     try:
@@ -197,8 +221,12 @@ def create_dataframe_vis(settings, data: dict, data_vis: list, names: list) -> T
     return dataframe, color
 
 
-def match_blanks_to_predictions(predicted_labels: np.ndarray, gating_type: str, gating_results: np.ndarray,
-                                threshold: float) -> np.ndarray:
+def match_blanks_to_predictions(
+    predicted_labels: np.ndarray,
+    gating_type: str,
+    gating_results: np.ndarray,
+    threshold: float,
+) -> np.ndarray:
     """
     Labels events as blanks if the corresponding MSE is above the threshold.
     Args:
@@ -216,7 +244,9 @@ def match_blanks_to_predictions(predicted_labels: np.ndarray, gating_type: str, 
     return predicted_labels
 
 
-def drop_blanks(true_labels: np.ndarray, predicted_probs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def drop_blanks(
+    true_labels: np.ndarray, predicted_probs: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Drop blanks from the true labels and predicted probabilities.
     Args:
@@ -246,7 +276,9 @@ def split_files(files: list, gating_type: str = "Autoencoder") -> Tuple[list, li
     if gating_type == "Machine":
         files_pred, files_refs = [], []
         for file in files:
-            files_refs.append(file) if "_ref" in file.lower() else files_pred.append(file)
+            files_refs.append(file) if "_ref" in file.lower() else files_pred.append(
+                file
+            )
         return files_pred, files_refs
     else:
         return files, []

@@ -1,7 +1,20 @@
 from abc import abstractmethod
 
-from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QListWidget, QFileDialog, QStackedWidget, QMessageBox, \
-    QFrame, QComboBox, QLineEdit, QTextEdit, QCheckBox, QInputDialog
+from PyQt6.QtWidgets import (
+    QWidget,
+    QPushButton,
+    QLabel,
+    QListWidget,
+    QFileDialog,
+    QStackedWidget,
+    QMessageBox,
+    QFrame,
+    QComboBox,
+    QLineEdit,
+    QTextEdit,
+    QCheckBox,
+    QInputDialog,
+)
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QPainter
 
@@ -22,7 +35,15 @@ class Widget(QWidget):
     name = None
     stack = None
 
-    def __init__(self, obj_name: str = None, geometry: list = None, name: str = None, stack=None, *args, **kwargs):
+    def __init__(
+        self,
+        obj_name: str = None,
+        geometry: list = None,
+        name: str = None,
+        stack=None,
+        *args,
+        **kwargs
+    ):
         """
         Args:
             obj_name (str, optional): Object name of the widget. Defaults to None.
@@ -92,7 +113,11 @@ class Label(QLabel, Widget):
 
     def __init__(self, *args, **kwargs) -> None:
         super(Label, self).__init__(*args, **kwargs)
-        if self.objectName() == "tittle" or self.objectName() == "version" or self.objectName() == "overlay":
+        if (
+            self.objectName() == "tittle"
+            or self.objectName() == "version"
+            or self.objectName() == "overlay"
+        ):
             self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
 
@@ -215,7 +240,11 @@ class Button(QPushButton, Widget):
             stack.center()
 
         windows = self.parent().stack
-        if self.text() == "Prediction" or self.text() == "Tool\nDiagnostics" or self.text() == "Training":
+        if (
+            self.text() == "Prediction"
+            or self.text() == "Tool\nDiagnostics"
+            or self.text() == "Training"
+        ):
             self.clicked.connect(lambda: show_file_selection_window(windows))
         elif self.text() == "Settings":
             self.clicked.connect(lambda: show_settings(windows))
@@ -223,14 +252,20 @@ class Button(QPushButton, Widget):
             self.clicked.connect(lambda: windows.setCurrentIndex(5))
         elif self.text() == "Menu" or self.text() == "Clear Data":
             self.clicked.connect(lambda: clear(windows))
-        elif self.text() == "Predict" or self.text() == "Diagnose" or self.text() == "Train":
+        elif (
+            self.text() == "Predict"
+            or self.text() == "Diagnose"
+            or self.text() == "Train"
+        ):
             self.clicked.connect(lambda: windows.widget(1).run_action())
         elif self.text() == "Apply":
             self.clicked.connect(lambda: windows.widget(4).update_config())
         elif self.text() == "Change":
             self.clicked.connect(lambda: set_output_directory(windows))
         elif self.text() == "MSE" or self.text() == "Predictions":
-            self.clicked.connect(lambda: windows.currentWidget().change_plot(plot_type=self.text()))
+            self.clicked.connect(
+                lambda: windows.currentWidget().change_plot(plot_type=self.text())
+            )
         elif self.text() == "Adjust MSE":
             self.clicked.connect(lambda: windows.currentWidget().adjust_mse())
         elif self.text() == "Save Results":
@@ -280,6 +315,7 @@ class CheckableComboBox(QComboBox, Widget):
     """
     Checkable combo box widget. Inherits from QComboBox and Widget. Allows to select multiple items.
     """
+
     def __init__(self, *args, **kwargs) -> None:
         super(QComboBox, self).__init__(*args, **kwargs)
         self.view().pressed.connect(self.__handle_item_pressed)
@@ -298,7 +334,9 @@ class CheckableComboBox(QComboBox, Widget):
         else:
             if self.name == "vis_channels":
                 checked_items = self.get_check_items()
-                if len(checked_items) >= int(self.parent().children()[17].currentText()):
+                if len(checked_items) >= int(
+                    self.parent().children()[17].currentText()
+                ):
                     checked_items.pop(0)
                     self.set_checked_items(checked_items)
             item.setCheckState(Qt.CheckState.Checked)
@@ -338,9 +376,13 @@ class CheckableComboBox(QComboBox, Widget):
         """
         all_items = [self.itemText(i) for i in range(self.count())]
         for item in all_items:
-            self.model().item(all_items.index(item)).setCheckState(Qt.CheckState.Unchecked)
+            self.model().item(all_items.index(item)).setCheckState(
+                Qt.CheckState.Unchecked
+            )
             if item in items:
-                self.model().item(all_items.index(item)).setCheckState(Qt.CheckState.Checked)
+                self.model().item(all_items.index(item)).setCheckState(
+                    Qt.CheckState.Checked
+                )
 
     def get_check_items(self) -> list:
         """
@@ -368,6 +410,7 @@ class DropBox(QListWidget, Widget):
     """
     Drop box widget. Inherits from QListWidget and Widget. Allows to drag and drop files.
     """
+
     def __init__(self, *args, **kwargs) -> None:
         super(DropBox, self).__init__(*args, **kwargs)
         self.setAcceptDrops(True)
@@ -398,8 +441,10 @@ class DropBox(QListWidget, Widget):
             event.setDropAction(Qt.DropAction.CopyAction)
             event.accept()
 
-            links = [str(url.toLocalFile()) if url.isLocalFile() else str(url.toString()) for url in
-                     event.mimeData().urls()]
+            links = [
+                str(url.toLocalFile()) if url.isLocalFile() else str(url.toString())
+                for url in event.mimeData().urls()
+            ]
             self.addItems(links)
         else:
             event.ignore()
@@ -416,9 +461,14 @@ class DropBox(QListWidget, Widget):
             col = self.palette().placeholderText().color()
             painter.setPen(col)
             fm = self.fontMetrics()
-            elided_text = fm.elidedText("Drop Files or Click to Select", Qt.TextElideMode.ElideRight,
-                                        self.viewport().width())
-            painter.drawText(self.viewport().rect(), Qt.AlignmentFlag.AlignCenter, elided_text)
+            elided_text = fm.elidedText(
+                "Drop Files or Click to Select",
+                Qt.TextElideMode.ElideRight,
+                self.viewport().width(),
+            )
+            painter.drawText(
+                self.viewport().rect(), Qt.AlignmentFlag.AlignCenter, elided_text
+            )
             painter.restore()
         else:
             self.setObjectName("added")
@@ -428,6 +478,9 @@ class DropBox(QListWidget, Widget):
         """
         Handles the mouse press event.
         """
-        files, _ = QFileDialog.getOpenFileNames(self, initialFilter="CSV Files (*.csv);; TSV Files (*.tsv);; "
-                                                                    "FCS files (*.fcs)")
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            initialFilter="CSV Files (*.csv);; TSV Files (*.tsv);; "
+            "FCS files (*.fcs)",
+        )
         self.addItems(files)

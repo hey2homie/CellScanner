@@ -3,6 +3,7 @@ from utilities.classification_utils import ClassificationModel, AutoEncoder
 from .widgets import Widget, DropBox, Button, EditLine, CheckBox, MessageBox
 from utilities.helpers import split_files
 
+
 class FileSelector(Widget):
     """
     Attributes:
@@ -24,15 +25,34 @@ class FileSelector(Widget):
         """
         self.setWindowTitle("File Selection")
         DropBox(obj_name="drop", geometry=[46, 43, 808, 450], parent=self)
-        Button(text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self)
-        Button(text="Clear Data", obj_name="standard", geometry=[349, 518, 200, 60], parent=self)
-        Button(text="Predict", obj_name="standard", geometry=[652, 518, 200, 60], parent=self)
+        Button(
+            text="Menu", obj_name="standard", geometry=[46, 518, 200, 60], parent=self
+        )
+        Button(
+            text="Clear Data",
+            obj_name="standard",
+            geometry=[349, 518, 200, 60],
+            parent=self,
+        )
+        Button(
+            text="Predict",
+            obj_name="standard",
+            geometry=[652, 518, 200, 60],
+            parent=self,
+        )
         if self.action == "Tool\nDiagnostics":
             self.children()[3].setText("Diagnose")
         elif self.action == "Training":
-            model_name = EditLine(obj_name="input", geometry=[46, 43, 638, 30], parent=self)
+            model_name = EditLine(
+                obj_name="input", geometry=[46, 43, 638, 30], parent=self
+            )
             model_name.setPlaceholderText("Enter model name")
-            CheckBox(text="Autoencoder", obj_name="use_ae", geometry=[703, 43, 150, 30], parent=self)
+            CheckBox(
+                text="Autoencoder",
+                obj_name="use_ae",
+                geometry=[703, 43, 150, 30],
+                parent=self,
+            )
             self.children()[0].setGeometry(46, 93, 808, 400)
             self.children()[3].setText("Train")
 
@@ -65,11 +85,23 @@ class FileSelector(Widget):
                     return
                 model_name = model_name + ".h5"
                 if self.children()[5].isChecked():
-                    model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
-                                        name=model_name, training_cls=False)
+                    model = AutoEncoder(
+                        settings=settings,
+                        model_info=models_info,
+                        files=files,
+                        model_type="ae",
+                        name=model_name,
+                        training_cls=False,
+                    )
                 else:
-                    model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                                model_type="classifier", name=model_name, training_cls=True)
+                    model = ClassificationModel(
+                        settings=settings,
+                        model_info=models_info,
+                        files=files,
+                        model_type="classifier",
+                        name=model_name,
+                        training_cls=True,
+                    )
                 model.run_training()
                 self.stack.widget(4).set_values_from_config()
                 self.stack.widget(3).run_tf_board(name=model_name)
@@ -81,8 +113,13 @@ class FileSelector(Widget):
                 if settings.model == "":
                     MessageBox.about(self, "Warning", "Model is not provided")
                     return
-                model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                            model_type="classifier", name=settings.model)
+                model = ClassificationModel(
+                    settings=settings,
+                    model_info=models_info,
+                    files=files,
+                    model_type="classifier",
+                    name=settings.model,
+                )
                 if self.action == "Tool\nDiagnostics":
                     outputs = model.run_diagnostics()
                 elif self.action == "Prediction":

@@ -1,8 +1,15 @@
 from itertools import cycle
 
 import numpy as np
-from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score, \
-    PrecisionRecallDisplay, RocCurveDisplay
+from sklearn.metrics import (
+    confusion_matrix,
+    roc_curve,
+    auc,
+    precision_recall_curve,
+    average_precision_score,
+    PrecisionRecallDisplay,
+    RocCurveDisplay,
+)
 from sklearn.preprocessing import label_binarize
 from mlxtend.evaluate import confusion_matrix
 
@@ -50,8 +57,13 @@ class UmapVisualization:
         Returns:
             np.ndarray: Embeddings of the data.
         """
-        reducer = umap.UMAP(n_components=self.dims, n_neighbors=25, min_dist=0.1, metric="euclidean",
-                            n_jobs=self.num_cores)
+        reducer = umap.UMAP(
+            n_components=self.dims,
+            n_neighbors=25,
+            min_dist=0.1,
+            metric="euclidean",
+            n_jobs=self.num_cores,
+        )
         fitted = reducer.fit_transform(self.data)
         return fitted
 
@@ -85,8 +97,20 @@ class MplVisualization:
             None.
         """
         self.output_path = output_path
-        self.colors = cycle(["aqua", "darkorange", "cornflowerblue", "goldenrod", "rosybrown", "lightgreen",
-                             "lightgray", "orchid", "darkmagenta", "olive"])
+        self.colors = cycle(
+            [
+                "aqua",
+                "darkorange",
+                "cornflowerblue",
+                "goldenrod",
+                "rosybrown",
+                "lightgreen",
+                "lightgray",
+                "orchid",
+                "darkmagenta",
+                "olive",
+            ]
+        )
         self.classes = None
         self.n_classes = None
 
@@ -100,16 +124,26 @@ class MplVisualization:
             None.
         """
         for file, data in inputs.items():
-            dataframe, gating_results, labels = data["data"], data["gating_results"], data["labels"]
+            dataframe, gating_results, labels = (
+                data["data"],
+                data["gating_results"],
+                data["labels"],
+            )
             labels_uniq = np.unique(labels)
             file = file.split("/")[-1].split(".")[0]
             if settings.vis_type == "Channels":
                 if settings.fc_type == "Accuri":
                     channels_use = settings.vis_channels_accuri
-                    indexes = [SettingsOptions.vis_channels_accuri.value.index(channel) for channel in channels_use]
+                    indexes = [
+                        SettingsOptions.vis_channels_accuri.value.index(channel)
+                        for channel in channels_use
+                    ]
                 else:
                     channels_use = settings.vis_channels_cytoflex
-                    indexes = [SettingsOptions.vis_channels_cytoflex.value.index(channel) for channel in channels_use]
+                    indexes = [
+                        SettingsOptions.vis_channels_cytoflex.value.index(channel)
+                        for channel in channels_use
+                    ]
             else:
                 dataframe = data["embeddings"]
                 channels_use = ["X", "Y", "Z"]
@@ -138,7 +172,9 @@ class MplVisualization:
                 if settings.vis_dims == 3:
                     col_z = list(map(float, dataframe[:, indexes[2]]))
                     axis_z = np.take(col_z, indexes_plot, axis=0)
-                    ax.scatter3D(axis_x, axis_y, axis_z, c=color, label=label, norm=norm)
+                    ax.scatter3D(
+                        axis_x, axis_y, axis_z, c=color, label=label, norm=norm
+                    )
                 else:
                     ax.scatter(axis_x, axis_y, c=color, label=label)
                 if settings.gating_type == "Autoencoder":
@@ -162,8 +198,14 @@ class MplVisualization:
                 mse_fig.savefig(self.output_path + file + "_" + "mse.png")
             plt.close()
 
-    def diagnostics(self, true_labels: np.ndarray, predicted_labels: np.ndarray,
-                    predicted_labels_probs: np.ndarray, gating_results: np.ndarray, mse_threshold: float) -> np.ndarray:
+    def diagnostics(
+        self,
+        true_labels: np.ndarray,
+        predicted_labels: np.ndarray,
+        predicted_labels_probs: np.ndarray,
+        gating_results: np.ndarray,
+        mse_threshold: float,
+    ) -> np.ndarray:
         """
         Creates plots that are used to access the performance of the model. Plots include ROC curve, precision-recall
         pie chart of overall accuracy, aggregated confusion matrix, and MSE histogram.
@@ -185,12 +227,20 @@ class MplVisualization:
             :meth:`__mse`.
         """
         if np.unique(true_labels).shape[0] != np.unique(predicted_labels).shape[0]:
-            raise ValueError("Number of classes in true and predicted labels are not equal")
-        true_labels_binarized, predicted_labels_probs = drop_blanks(true_labels, predicted_labels_probs)
+            raise ValueError(
+                "Number of classes in true and predicted labels are not equal"
+            )
+        true_labels_binarized, predicted_labels_probs = drop_blanks(
+            true_labels, predicted_labels_probs
+        )
         self.classes = np.unique(true_labels_binarized)
         self.n_classes = self.classes.shape[0]
-        true_labels_binarized = label_binarize(true_labels_binarized, classes=self.classes[self.classes != "Blank"])
-        self.classes = {i: bacteria_class for i, bacteria_class in enumerate(self.classes)}
+        true_labels_binarized = label_binarize(
+            true_labels_binarized, classes=self.classes[self.classes != "Blank"]
+        )
+        self.classes = {
+            i: bacteria_class for i, bacteria_class in enumerate(self.classes)
+        }
         labels_compared = self.__pie(true_labels, predicted_labels)
         self.__roc(true_labels_binarized, predicted_labels_probs)
         self.__precision_recall(true_labels_binarized, predicted_labels_probs)
@@ -199,7 +249,9 @@ class MplVisualization:
             self.__mse_scatter(gating_results, true_labels, mse_threshold)
         return labels_compared
 
-    def __pie(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> np.ndarray:
+    def __pie(
+        self, true_labels: np.ndarray, predicted_labels: np.ndarray
+    ) -> np.ndarray:
         """
         Creates pie chart of correct/incorrect labels.
         Args:
@@ -210,7 +262,9 @@ class MplVisualization:
         """
         labels = []
         for i in range(0, len(true_labels)):
-            labels.append("Correct") if true_labels[i] == predicted_labels[i] else labels.append("Incorrect")
+            labels.append("Correct") if true_labels[i] == predicted_labels[
+                i
+            ] else labels.append("Incorrect")
         labels = np.array(labels)
         _, count_labels = np.unique(np.asarray(labels), return_counts=True)
         plt.pie(count_labels, labels=["Correct", "Incorrect"], autopct="%.0f%%")
@@ -219,7 +273,9 @@ class MplVisualization:
         plt.close()
         return labels
 
-    def __roc(self, true_labels: np.ndarray, predicted_labels_probs: np.ndarray) -> None:
+    def __roc(
+        self, true_labels: np.ndarray, predicted_labels_probs: np.ndarray
+    ) -> None:
         """
         Creates plot of ROC curves.
         Args:
@@ -233,28 +289,53 @@ class MplVisualization:
             tpr = dict()
             roc_auc = dict()
             for i in range(self.n_classes):
-                fpr[i], tpr[i], _ = roc_curve(true_labels[:, i], predicted_labels_probs[:, i])
+                fpr[i], tpr[i], _ = roc_curve(
+                    true_labels[:, i], predicted_labels_probs[:, i]
+                )
                 roc_auc[i] = auc(fpr[i], tpr[i])
             all_fpr = np.unique(np.concatenate([fpr[i] for i in range(self.n_classes)]))
             mean_tpr = np.zeros_like(all_fpr)
             for i in range(self.n_classes):
                 mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
             mean_tpr /= self.n_classes
-            fpr["micro"], tpr["micro"], _ = roc_curve(true_labels.ravel(), predicted_labels_probs.ravel())
+            fpr["micro"], tpr["micro"], _ = roc_curve(
+                true_labels.ravel(), predicted_labels_probs.ravel()
+            )
             roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
             fpr["macro"] = all_fpr
             tpr["macro"] = mean_tpr
             roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
             plt.figure()
-            plt.plot(fpr["micro"], tpr["micro"],
-                     label="micro-average ROC curve (area = {0:0.2f})".format(roc_auc["micro"]), color="deeppink",
-                     linestyle=":", linewidth=4)
-            plt.plot(fpr["macro"], tpr["macro"],
-                     label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]), color="navy",
-                     linestyle=":", linewidth=4)
+            plt.plot(
+                fpr["micro"],
+                tpr["micro"],
+                label="micro-average ROC curve (area = {0:0.2f})".format(
+                    roc_auc["micro"]
+                ),
+                color="deeppink",
+                linestyle=":",
+                linewidth=4,
+            )
+            plt.plot(
+                fpr["macro"],
+                tpr["macro"],
+                label="macro-average ROC curve (area = {0:0.2f})".format(
+                    roc_auc["macro"]
+                ),
+                color="navy",
+                linestyle=":",
+                linewidth=4,
+            )
             for i, color in zip(range(self.n_classes), self.colors):
-                plt.plot(fpr[i], tpr[i], color=color, lw=2,
-                         label="ROC curve of class {0} (area = {1:0.2f})".format(self.classes[i], roc_auc[i]))
+                plt.plot(
+                    fpr[i],
+                    tpr[i],
+                    color=color,
+                    lw=2,
+                    label="ROC curve of class {0} (area = {1:0.2f})".format(
+                        self.classes[i], roc_auc[i]
+                    ),
+                )
             plt.plot([0, 1], [0, 1], "k--", lw=2)
             plt.xlim([0.0, 1.0])
             plt.ylim([0.0, 1.05])
@@ -268,7 +349,9 @@ class MplVisualization:
         plt.savefig(self.output_path + "roc.png")
         plt.close()
 
-    def __precision_recall(self, true_labels: np.ndarray, predicted_labels_probs: np.ndarray) -> None:
+    def __precision_recall(
+        self, true_labels: np.ndarray, predicted_labels_probs: np.ndarray
+    ) -> None:
         """
         Creates plot of precision-recall curves.
         Args:
@@ -282,8 +365,12 @@ class MplVisualization:
             recall = dict()
             average_precision = dict()
             for i in range(self.n_classes):
-                precision[i], recall[i], _ = precision_recall_curve(true_labels[:, i], predicted_labels_probs[:, i])
-                average_precision[i] = average_precision_score(true_labels[:, i], predicted_labels_probs[:, i])
+                precision[i], recall[i], _ = precision_recall_curve(
+                    true_labels[:, i], predicted_labels_probs[:, i]
+                )
+                average_precision[i] = average_precision_score(
+                    true_labels[:, i], predicted_labels_probs[:, i]
+                )
             _, ax = plt.subplots(figsize=(7, 8))
             f_scores = np.linspace(0.2, 0.8, num=4)
             iso_curves = None
@@ -294,9 +381,14 @@ class MplVisualization:
                 plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
             display = None
             for i, color in zip(range(self.n_classes), self.colors):
-                display = PrecisionRecallDisplay(recall=recall[i], precision=precision[i],
-                                                 average_precision=average_precision[i])
-                display.plot(ax=ax, name=f"Precision-recall for {self.classes[i]}", color=color)
+                display = PrecisionRecallDisplay(
+                    recall=recall[i],
+                    precision=precision[i],
+                    average_precision=average_precision[i],
+                )
+                display.plot(
+                    ax=ax, name=f"Precision-recall for {self.classes[i]}", color=color
+                )
             handles, labels = display.ax_.get_legend_handles_labels()
             handles.extend([iso_curves])
             labels.extend(["Iso-f1 curves"])
@@ -305,12 +397,16 @@ class MplVisualization:
             ax.legend(handles=handles, labels=labels, loc="lower right")
             ax.set_title("Precision-Recall Curves")
         else:
-            precision, recall, _ = precision_recall_curve(true_labels, predicted_labels_probs[:, 1])
+            precision, recall, _ = precision_recall_curve(
+                true_labels, predicted_labels_probs[:, 1]
+            )
             PrecisionRecallDisplay(precision=precision, recall=recall).plot()
         plt.savefig(self.output_path + "precision_recall.png")
         plt.close()
 
-    def __confusion_matrix(self, true_labels: np.ndarray, predicted_labels: np.ndarray) -> None:
+    def __confusion_matrix(
+        self, true_labels: np.ndarray, predicted_labels: np.ndarray
+    ) -> None:
         """
         Creates aggregated confusion matrix.
         Args:
@@ -323,13 +419,17 @@ class MplVisualization:
         _, predicted_labels_counts = np.unique(predicted_labels, return_inverse=True)
         cm = confusion_matrix(true_labels_counts, predicted_labels_counts)
         plt.figure()
-        plot_confusion_matrix(conf_mat=cm, class_names=true_labels, figsize=(7, 8), show_normed="true")
+        plot_confusion_matrix(
+            conf_mat=cm, class_names=true_labels, figsize=(7, 8), show_normed="true"
+        )
         plt.tight_layout()
         plt.title("Confusion Matrix")
         plt.savefig(self.output_path + "confusion_matrix.png")
         plt.close()
 
-    def __mse_scatter(self, mse: np.ndarray, true_labels: np.ndarray, mse_threshold: float) -> None:
+    def __mse_scatter(
+        self, mse: np.ndarray, true_labels: np.ndarray, mse_threshold: float
+    ) -> None:
         """
         Creates scatter plot of MSE values.
         Args:

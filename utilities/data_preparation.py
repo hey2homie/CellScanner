@@ -36,7 +36,13 @@ class FilePreparation:
         Binary classification model used for gating.
     """
 
-    def __init__(self, files: list, settings: Settings, models_info: ModelsInfo, training_cls: bool = False) -> None:
+    def __init__(
+        self,
+        files: list,
+        settings: Settings,
+        models_info: ModelsInfo,
+        training_cls: bool = False,
+    ) -> None:
         """
         Args:
             files (list): List containing paths to the files to be processed.
@@ -88,7 +94,9 @@ class FilePreparation:
         elif extension == "xlsx":
             return pd.read_excel(file)
 
-    def __drop_columns(self, dataframe: pd.DataFrame) -> Tuple[pd.DataFrame, np.ndarray]:
+    def __drop_columns(
+        self, dataframe: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, np.ndarray]:
         """
         Drops the columns. Columns are dropped based on the settings in case of preparing data for autoencoder training.
         In all other cases, the columns are dropped based on the currently selected autoencoder metadata.
@@ -103,14 +111,23 @@ class FilePreparation:
             self.models_info.autoencoder_name = self.settings.autoencoder
             cols_to_drop = self.models_info.get_features_ae()
         else:
-            cols_to_drop = self.settings.cols_to_drop_accuri if self.settings.fc_type == "Accuri" else \
-                self.settings.cols_to_drop_cytoflex
+            cols_to_drop = (
+                self.settings.cols_to_drop_accuri
+                if self.settings.fc_type == "Accuri"
+                else self.settings.cols_to_drop_cytoflex
+            )
         try:
-            dataframe = dataframe[cols_to_drop] if self.gating else dataframe.drop(cols_to_drop, axis=1)
+            dataframe = (
+                dataframe[cols_to_drop]
+                if self.gating
+                else dataframe.drop(cols_to_drop, axis=1)
+            )
             features = np.array(dataframe.columns)
             return dataframe, features
         except KeyError:
-            raise KeyError(f"Columns to drop are not present in the dataframe. Columns to drop: {cols_to_drop}")
+            raise KeyError(
+                f"Columns to drop are not present in the dataframe. Columns to drop: {cols_to_drop}"
+            )
 
     @staticmethod
     def __scale(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -132,10 +149,18 @@ class FilePreparation:
         Returns:
             None
         """
-        self.machine_gating_model = MLPClassifier(hidden_layer_sizes=200, max_iter=200, activation="relu",
-                                                  solver="lbfgs", random_state=None, learning_rate="constant",
-                                                  early_stopping=False)
-        original_files, ref_files = split_files(self.files_list, gating_type=self.settings.gating_type)
+        self.machine_gating_model = MLPClassifier(
+            hidden_layer_sizes=200,
+            max_iter=200,
+            activation="relu",
+            solver="lbfgs",
+            random_state=None,
+            learning_rate="constant",
+            early_stopping=False,
+        )
+        original_files, ref_files = split_files(
+            self.files_list, gating_type=self.settings.gating_type
+        )
         ref_files = self.get_aggregated(ref_files)
         self.files_list = original_files
         self.gating, self.data = True, {}
@@ -156,15 +181,22 @@ class FilePreparation:
         gating_results = None
         if self.settings.gating_type == "Autoencoder" and self.gating:
             from utilities.classification_utils import AutoEncoder
+
             if self.autoencoder_model is None:
                 self.models_info.autoencoder_name = self.settings.autoencoder
-                self.autoencoder_model = AutoEncoder(settings=self.settings, model_info=self.models_info,
-                                                     model_type="ae", name=self.settings.autoencoder)
+                self.autoencoder_model = AutoEncoder(
+                    settings=self.settings,
+                    model_info=self.models_info,
+                    model_type="ae",
+                    name=self.settings.autoencoder,
+                )
                 self.autoencoder_model = self.autoencoder_model.get_model()
             predicted = self.autoencoder_model.predict(dataframe)
             gating_results = np.mean(np.power(dataframe - predicted, 2), axis=1)
             if self.training_cls:
-                dataframe = dataframe[gating_results < self.settings.mse_threshold].values
+                dataframe = dataframe[
+                    gating_results < self.settings.mse_threshold
+                ].values
         elif self.settings.gating_type == "Machine" and self.gating:
             gating_results = self.machine_gating_model.predict(dataframe)
         return np.array(dataframe), gating_results
@@ -207,8 +239,12 @@ class FilePreparation:
             self.data[file] = self.__scale(self.data[file])
             self.data[file], gating_results = self.__gate(self.data[file])
             labels = self.__add_labels(file=file, length=self.data[file].shape[0])
-            self.data[file] = {"data": self.data[file], "gating_results": gating_results, "labels": labels,
-                               "features": features}
+            self.data[file] = {
+                "data": self.data[file],
+                "gating_results": gating_results,
+                "labels": labels,
+                "features": features,
+            }
         return self.data
 
     def get_aggregated(self, files: list = None) -> dict:
@@ -238,8 +274,13 @@ class FilePreparation:
             gating_results = np.concatenate(gating_results, axis=0)
         except ValueError:
             pass
-        return {"data": data, "gating_results": gating_results, "labels": labels, "features": features,
-                "files": self.files_list}
+        return {
+            "data": data,
+            "gating_results": gating_results,
+            "labels": labels,
+            "features": features,
+            "files": self.files_list,
+        }
 
 
 class DataPreparation:
@@ -256,7 +297,9 @@ class DataPreparation:
         Optional; Batch size for the dataset.
     """
 
-    def __init__(self, dataframe: np.ndarray, labels: np.ndarray = None, batch_size: int = 256) -> None:
+    def __init__(
+        self, dataframe: np.ndarray, labels: np.ndarray = None, batch_size: int = 256
+    ) -> None:
         """
         Args:
             dataframe (np.ndarray): Numpy array containing the data.
@@ -278,7 +321,9 @@ class DataPreparation:
         """
         self.labels, self.labels_ints = np.unique(self.labels, return_inverse=True)
         self.labels_ints = tf.convert_to_tensor(self.labels_ints, dtype=tf.float32)
-        self.labels_ints = tf.keras.utils.to_categorical(self.labels_ints, num_classes=len(self.labels))
+        self.labels_ints = tf.keras.utils.to_categorical(
+            self.labels_ints, num_classes=len(self.labels)
+        )
 
     def create_datasets(self) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
         """
@@ -289,9 +334,13 @@ class DataPreparation:
         """
         if self.labels is not None:
             self.__map_labels()
-            dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.labels_ints))
+            dataset = tf.data.Dataset.from_tensor_slices(
+                (self.dataframe, self.labels_ints)
+            )
         else:
-            dataset = tf.data.Dataset.from_tensor_slices((self.dataframe, self.dataframe))
+            dataset = tf.data.Dataset.from_tensor_slices(
+                (self.dataframe, self.dataframe)
+            )
         dataset = dataset.shuffle(self.dataframe.shape[0])
         dataset_length = sum(1 for _ in dataset)
         training_length = np.rint(dataset_length * 0.8)

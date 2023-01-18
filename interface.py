@@ -22,22 +22,41 @@ def run_prediction(arguments: argparse.Namespace) -> None:
     if arguments.path is None or check_path(arguments.path) is None:
         raise argparse.ArgumentTypeError("Incorrect path or empty directory")
     if os.path.isdir(arguments.path):
-        files = [os.path.join(arguments.path, file) for file in os.listdir(arguments.path)]
+        files = [
+            os.path.join(arguments.path, file) for file in os.listdir(arguments.path)
+        ]
     else:
         files = [arguments.path]
     if arguments.command == "predict":
-        model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
-                                    name=settings.model)
+        model = ClassificationModel(
+            settings=settings,
+            model_info=models_info,
+            files=files,
+            model_type="classifier",
+            name=settings.model,
+        )
         results = model.run_classification()
         output_dir = create_output_dir(path=settings.results)
         visualizations = MplVisualization(output_path=output_dir)
-        visualizations.save_predictions_visualizations(inputs=results, settings=settings)
-        save_cell_counts(path=output_dir, inputs=results, gating_type=settings.gating_type,
-                         mse_threshold=settings.mse_threshold, prob_threshold=settings.softmax_prob_threshold)
+        visualizations.save_predictions_visualizations(
+            inputs=results, settings=settings
+        )
+        save_cell_counts(
+            path=output_dir,
+            inputs=results,
+            gating_type=settings.gating_type,
+            mse_threshold=settings.mse_threshold,
+            prob_threshold=settings.softmax_prob_threshold,
+        )
         print("\nClassification is finished")
     elif arguments.command == "validate":
-        model = ClassificationModel(settings=settings, model_info=models_info, files=files, model_type="classifier",
-                                    name=settings.model)
+        model = ClassificationModel(
+            settings=settings,
+            model_info=models_info,
+            files=files,
+            model_type="classifier",
+            name=settings.model,
+        )
         model.run_diagnostics()
         print("\nValidation is finished")
     elif arguments.command == "train":
@@ -59,12 +78,23 @@ def run_prediction(arguments: argparse.Namespace) -> None:
         if model_name and training_type:
             model_name += ".h5"
             if training_type == "classifier":
-                model = ClassificationModel(settings=settings, model_info=models_info, files=files,
-                                            model_type="classifier", name=model_name, training_cls=True)
+                model = ClassificationModel(
+                    settings=settings,
+                    model_info=models_info,
+                    files=files,
+                    model_type="classifier",
+                    name=model_name,
+                    training_cls=True,
+                )
 
             else:
-                model = AutoEncoder(settings=settings, model_info=models_info, files=files, model_type="ae",
-                                    name=model_name)
+                model = AutoEncoder(
+                    settings=settings,
+                    model_info=models_info,
+                    files=files,
+                    model_type="ae",
+                    name=model_name,
+                )
             model.run_training()
             print("\nTraining is finished")
         else:
@@ -136,18 +166,40 @@ def main() -> None:
         None.
     """
     parser = argparse.ArgumentParser(description="CellScanner")
-    parser.add_argument("command", type=str, help="Command to run",
-                        choices=["predict", "train", "validate", "settings"])
+    parser.add_argument(
+        "command",
+        type=str,
+        help="Command to run",
+        choices=["predict", "train", "validate", "settings"],
+    )
     parser.add_argument("-p", "--path", type=str, help="Path to files to process")
-    parser.add_argument("-s", "--show", dest="show", action="store_true", help="Show settings")
-    parser.add_argument("-c", "--change", type=str, help="Change settings",
-                        choices=list(vars(settings).keys()), nargs=1)
-    parser.add_argument("-m", "--model", type=str, help="What type of model to train",
-                        choices=["autoencoder", "classifier"], nargs=1)
+    parser.add_argument(
+        "-s", "--show", dest="show", action="store_true", help="Show settings"
+    )
+    parser.add_argument(
+        "-c",
+        "--change",
+        type=str,
+        help="Change settings",
+        choices=list(vars(settings).keys()),
+        nargs=1,
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        type=str,
+        help="What type of model to train",
+        choices=["autoencoder", "classifier"],
+        nargs=1,
+    )
     parser.add_argument("-n", "--name", type=str, help="Name of the model", nargs=1)
     parser.add_argument("-v", "--value", type=str, help="Settings value", nargs=1)
     arguments = parser.parse_args()
-    if arguments.command == "predict" or arguments.command == "train" or arguments.command == "validate":
+    if (
+        arguments.command == "predict"
+        or arguments.command == "train"
+        or arguments.command == "validate"
+    ):
         run_prediction(arguments)
     elif arguments.command == "settings":
         run_settings(arguments)

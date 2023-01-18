@@ -10,23 +10,93 @@ class SettingsOptions(Enum):
     """
     Enum containing options for the Combo Boxes used in SettingsWindow.
     """
+
     fc_type = ["Accuri", "Cytoflex"]
     model = [os.path.basename(file) for file in glob("./classifiers/*.h5")]
     autoencoder = [os.path.basename(file) for file in glob("./autoencoders/*.h5")]
     vis_type = ["UMAP", "Channels"]
     vis_dims = ["2", "3"]
     # TODO: Remove vis_channels and rely solely on the channels of the autoencoder
-    vis_channels_accuri = ["FSC-A", "SSC-A", "FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H",
-                           "FL3-H", "FL4-H", "Width"]
-    vis_channels_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
-                             "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
-                             "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width"]
-    cols_to_drop_accuri = ["FL1-A", "FL2-A", "FL3-A", "FL4-A", "FSC-H", "SSC-H", "FL1-H", "FL2-H", "FL3-H", "FL4-H",
-                           "Width", "Time"]
-    cols_to_drop_cytoflex = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL4-H", "FL4-A", "FL3-red-H",
-                             "FL3-red-A", "APC-A750-H", "APC-A750-A", "VSSC-H", "VSSC-A", "KO525-H", "KO525-A",
-                             "FL2-orange-H", "FL2-orange-A", "mCherry-H", "mCherry-A", "PI-H", "PI-A", "FSC-Width",
-                             "Time"]
+    vis_channels_accuri = [
+        "FSC-A",
+        "SSC-A",
+        "FL1-A",
+        "FL2-A",
+        "FL3-A",
+        "FL4-A",
+        "FSC-H",
+        "SSC-H",
+        "FL1-H",
+        "FL2-H",
+        "FL3-H",
+        "FL4-H",
+        "Width",
+    ]
+    vis_channels_cytoflex = [
+        "FSC-H",
+        "FSC-A",
+        "SSC-H",
+        "SSC-A",
+        "FL1-H",
+        "FL1-A",
+        "FL4-H",
+        "FL4-A",
+        "FL3-red-H",
+        "FL3-red-A",
+        "APC-A750-H",
+        "APC-A750-A",
+        "VSSC-H",
+        "VSSC-A",
+        "KO525-H",
+        "KO525-A",
+        "FL2-orange-H",
+        "FL2-orange-A",
+        "mCherry-H",
+        "mCherry-A",
+        "PI-H",
+        "PI-A",
+        "FSC-Width",
+    ]
+    cols_to_drop_accuri = [
+        "FL1-A",
+        "FL2-A",
+        "FL3-A",
+        "FL4-A",
+        "FSC-H",
+        "SSC-H",
+        "FL1-H",
+        "FL2-H",
+        "FL3-H",
+        "FL4-H",
+        "Width",
+        "Time",
+    ]
+    cols_to_drop_cytoflex = [
+        "FSC-H",
+        "FSC-A",
+        "SSC-H",
+        "SSC-A",
+        "FL1-H",
+        "FL1-A",
+        "FL4-H",
+        "FL4-A",
+        "FL3-red-H",
+        "FL3-red-A",
+        "APC-A750-H",
+        "APC-A750-A",
+        "VSSC-H",
+        "VSSC-A",
+        "KO525-H",
+        "KO525-A",
+        "FL2-orange-H",
+        "FL2-orange-A",
+        "mCherry-H",
+        "mCherry-A",
+        "PI-H",
+        "PI-A",
+        "FSC-Width",
+        "Time",
+    ]
     hardware = ["GPU", "CPU"]
     lr = ["1e-6", "1e-5", "1e-4", "1e-3", "1e-2"]
     lr_scheduler = ["Constant", "Time Decay", "Step Decay", "Exponential Decay"]
@@ -95,6 +165,7 @@ class Settings:
         Threshold for softmax probability. Events with probability less than this value are labelled as low probability
         predictions.
     """
+
     fc_type = None
     hardware = None
     results = None
@@ -163,6 +234,7 @@ class ModelsInfo:
     autoencoder_name: str
         Current autoencoder name.
     """
+
     classifiers = None
     autoencoders = None
     classifier_name = None
@@ -257,8 +329,16 @@ class ModelsInfo:
             features = self.autoencoders[name][1]["features"]
             return ", ".join(features)
 
-    def add_classifier(self, name: str, fc_type: str, labels_map: dict, features_shape: int, labels_shape: int,
-                       files_used: list, autoencoder_used: str) -> None:
+    def add_classifier(
+        self,
+        name: str,
+        fc_type: str,
+        labels_map: dict,
+        features_shape: int,
+        labels_shape: int,
+        files_used: list,
+        autoencoder_used: str,
+    ) -> None:
         """
         Adds a classifier to the configuration file.
         Args:
@@ -276,11 +356,18 @@ class ModelsInfo:
         labels_map = {key: str(value) for key, value in labels_map.items()}
         files_used = [file.split("/")[-1] for file in files_used]
         self.classifier_name = name
-        self.classifiers[name] = [{"fc_type": fc_type}, {"features_shape": features_shape}, {"labels_map": labels_map},
-                                  {"labels_shape": labels_shape}, {"files_used": files_used},
-                                  {"autoencoder": autoencoder_used}]
+        self.classifiers[name] = [
+            {"fc_type": fc_type},
+            {"features_shape": features_shape},
+            {"labels_map": labels_map},
+            {"labels_shape": labels_shape},
+            {"files_used": files_used},
+            {"autoencoder": autoencoder_used},
+        ]
 
-    def add_autoencoder(self, name: str, fc_type: str, features: list, num_features: int) -> None:
+    def add_autoencoder(
+        self, name: str, fc_type: str, features: list, num_features: int
+    ) -> None:
         """
         Adds an autoencoder to the configuration file.
         Args:
@@ -292,7 +379,11 @@ class ModelsInfo:
             None.
         """
         self.autoencoder_name = name
-        self.autoencoders[name] = [{"fc_type": fc_type}, {"features": features}, {"num_features": num_features}]
+        self.autoencoders[name] = [
+            {"fc_type": fc_type},
+            {"features": features},
+            {"num_features": num_features},
+        ]
 
     def save_info(self) -> None:
         """
@@ -301,5 +392,9 @@ class ModelsInfo:
             None.
         """
         with open(".configs/models_info.yml", "w") as config:
-            yaml.dump({"autoencoders": self.autoencoders, "classifiers": self.classifiers}, config,
-                      default_flow_style=False, sort_keys=False)
+            yaml.dump(
+                {"autoencoders": self.autoencoders, "classifiers": self.classifiers},
+                config,
+                default_flow_style=False,
+                sort_keys=False,
+            )

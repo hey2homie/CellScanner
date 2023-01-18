@@ -38,7 +38,7 @@ QPushButton {
     background-color: #4e4d4d;
 }
 
-QPushButton:hover{
+QPushButton:hover {
     background-color: #605f5f;
 }
 
@@ -63,11 +63,11 @@ QLineEdit {
     text-align: center;
 }
 
-QLineEdit:hover{
+QLineEdit:hover {
     background-color: #605f5f;
 }
 
-QMessageBox {   /* TODO: Seems something is off */
+QMessageBox { /* TODO: Seems something is off */
     font-size: 16px; /* TODO: Maybe different size */
 }
 
