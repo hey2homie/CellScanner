@@ -9,7 +9,13 @@ Please, clone the repository and install all dependencies that are listed in the
 
 ### Windows 
 
-[TO BE UPDATED]
+If python is not installed, please download and install it from [here](https://www.python.org/downloads/). 
+Alternatively, you can use [Anaconda](https://www.anaconda.com/products/individual) to install python and all 
+dependencies. If git is installed, clone the repository as specified above. Alternatively, you can download the 
+repository, unpack it and open the terminal in the directory. To install all dependencies, type in the terminal:
+
+    $ pip install -r requirements.txt
+
 
 # Using CellScanner
 
@@ -20,6 +26,8 @@ for the CellScanner, while interface is used to run CellScanner inside the comma
 terminal:
     
     $ python start.py
+
+Note that at the first launch, it will take time for the TensorFlow to initialise. 
 
 The basic syntax to use CellScanner through command line is:
     

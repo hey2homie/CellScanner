@@ -159,7 +159,7 @@ class MplVisualization:
             if settings.gating_type == "Autoencoder":
                 mse_fig = plt.figure(figsize=(7, 7))
                 ax_mse = mse_fig.add_subplot()
-                mse = list(mse)
+                mse = list(data["gating_results"])
             col_x = list(map(float, dataframe[:, indexes[0]]))
             col_y = list(map(float, dataframe[:, indexes[1]]))
             cmaplist = [cmap(i) for i in range(cmap.N)]
